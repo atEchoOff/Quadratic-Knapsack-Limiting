@@ -15,7 +15,7 @@ function rhs!(du, u, cache, t)
     (; Q_skew_low) = cache.low_order_operators    
     (; Δ, R) = cache.fv_operators
     (; equations, volume_flux, surface_flux) = physics
-    (; VDM_inv, shock_capturing) = cache
+    (; VDM_inv, shock_capturing, nodewise_shock_capturing) = cache
 
     # interface flux
     uf = rd.Vf * u
@@ -95,14 +95,27 @@ function rhs!(du, u, cache, t)
             # 2. subcell Δ, R blending of rhs_vol_high/low        
             # @assert b < 100 * eps()
             a = v' * Δ * Diagonal(R * (rhs_vol_low - rhs_vol_high))
-            
-            # duH = rd.M \ rhs_vol_high
-            # duL = rd.M \ rhs_vol_low
-            # w = R * abs.(getindex.(duH - duL, 1))
-            # @. w = w^20
+            a = vec(a)
 
-            θ_init = initial_limiting_coefficients(R, u)
-            θ = cache.knapsack_solver(vec(a), b; upper_bounds=θ_init)
+            θ = cache.knapsack_solver(a, b)
+
+            if nodewise_shock_capturing
+                epsilon = 120.0
+                # @. a *= -log(1/e * θ)
+                # @. a *= 1 / cbrt(θ)
+                @. a *= 1 - 4 * N^2 * log(θ)
+                # @. a *= 1 + N*sqrt(-log(θ))
+                # # @. a *= (1 - 2 * N * (K / 64) * log(θ + 1e-8))
+                # @. a *= -epsilon * θ + (1 + epsilon)
+                # # @. a *= (-sqrt(epsilon) * θ + sqrt(epsilon))^2 + 1
+                # @. a *= -epsilon * min(1, θ + 1e-1) + (1 + epsilon)
+
+                θ = cache.knapsack_solver(a, b)
+                # @. a *= -epsilon * θ + (1 + epsilon)
+                # # @. a *= (-sqrt(epsilon) * θ + sqrt(epsilon))^2 + 1
+
+                # θ = cache.knapsack_solver(a, b)
+            end
 
             view(du, :, e) .+= rd.M \ (Δ * (Diagonal(θ) * R * rhs_vol_high + Diagonal(1 .- θ) * R * rhs_vol_low))
 
@@ -125,7 +138,7 @@ function initial_condition_basic(x, t, equations::CompressibleEulerEquations1D)
     # p = rho^equations.gamma 
 
     u = 1.0
-    rho = 1 + .999 * sin(pi * (x - u * t))
+    rho = 1 + .5 * sin(pi * (x - u * t))
     p = 0.1
 
     return SVector(prim2cons(SVector(rho, u, p), equations))
@@ -163,6 +176,7 @@ cache = (;
            knapsack_solver = knapsack_solver,
         physics = (; equations, volume_flux = flux_central, surface_flux = flux_lax_friedrichs),
         shock_capturing = shock_capturing,
+        nodewise_shock_capturing = nodewise_shock_capturing,
         VDM_inv = inv(rd.VDM)
         )
 

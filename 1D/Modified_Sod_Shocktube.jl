@@ -17,7 +17,7 @@ function rhs!(du, u, cache, t)
     (; Q_skew_low) = cache.low_order_operators    
     (; Δ, R) = cache.fv_operators
     (; equations, volume_flux, surface_flux, gamma) = physics
-    (; bc, VDM_inv, shock_capturing) = cache
+    (; bc, VDM_inv, shock_capturing, nodewise_shock_capturing) = cache
 
     # Boundary conditions (set end points to initial conditions)
     u[1, 1] = bc[:, 1]
@@ -102,18 +102,28 @@ function rhs!(du, u, cache, t)
             view(du, :, e) .+= rd.M \ (θ * rhs_vol_high + (1 - θ) * rhs_vol_low)
         elseif blend == :subcell
             a = v' * Δ * Diagonal(R * (rhs_vol_low - rhs_vol_high))
-            
-            # duH = rhs_vol_high
-            # duL = rhs_vol_low
-            ### Smaller differences, larger weight, smaller theta, more high order
-            ### Larger differences, smaller weight, larger theta, more low order
-            # diff = abs.(getindex.(duH - duL, 1))
-            # diff[diff .== 0] .= 1.0
-            # w = abs.(Δ') * (1.0 ./ diff)
 
 
             # Call the Knapsack Solver
-            θ = cache.knapsack_solver(vec(a), b)
+            a = vec(a)
+            θ = cache.knapsack_solver(a, b)
+            
+            if nodewise_shock_capturing
+                epsilon = 240.0
+                # @. a *= -log(1/e * θ)
+                # @. a *= 1 / cbrt(θ)
+                @. a *= 1 - 4 * N^2 * log(min(θ + 1 / (2N * K), 1))
+                # # @. a *= (1 - 2 * N * (K / 64) * log(θ + 1e-8))
+                # @. a *= -epsilon * θ + (1 + epsilon)
+                # # @. a *= (-sqrt(epsilon) * θ + sqrt(epsilon))^2 + 1
+                # @. a *= -epsilon * min(1, θ + 1e-3) + (1 + epsilon)
+
+                θ = cache.knapsack_solver(a, b)
+                # @. a *= -epsilon * θ + (1 + epsilon)
+                # # @. a *= (-sqrt(epsilon) * θ + sqrt(epsilon))^2 + 1
+
+                # θ = cache.knapsack_solver(a, b)
+            end
             view(du, :, e) .+= rd.M \ (Δ * (Diagonal(θ) * R * rhs_vol_high + Diagonal(1 .- θ) * R * rhs_vol_low))
         end
     end
@@ -176,15 +186,16 @@ cache = (;
            bc = [u0[1, 1] u0[end, end]],
            VDM_inv = inv(rd.VDM),
            shock_capturing = shock_capturing,
+           nodewise_shock_capturing = nodewise_shock_capturing,
            blend = blend,
         knapsack_solver = knapsack_solver,
         physics = (; equations, volume_flux = flux_central, surface_flux = flux_lax_friedrichs, gamma = gamma),
         );
 
-tspan = (0, 0.4);
-ode = ODEProblem(rhs!, u, tspan, cache);
+tspan = (0, 0.4)
+ode = ODEProblem(rhs!, u, tspan, cache)
 
-sol = solve(ode, timestepper, dt = dt, abstol=abstol, reltol=reltol, callback=AliveCallback(alive_interval=1000), adaptive=adaptive);
+sol = solve(ode, timestepper, dt = dt, abstol=abstol, reltol=reltol, callback=AliveCallback(alive_interval=1000), adaptive=adaptive)
 
 println("Completed run with N = $N, K = $K, knapsack_solver = $(typeof(knapsack_solver)), timestepper = $(typeof(timestepper)), abstol = $abstol, reltol = $reltol")
 

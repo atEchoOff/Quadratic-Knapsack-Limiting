@@ -14,9 +14,9 @@ include("../L2_knapsack_weighted_a.jl")
 N = 10
 K = 16
 
-# knapsack_solver = QuadraticKnapsackSolver{Float64}()
+knapsack_solver = QuadraticKnapsackSolver{Float64}()
 # knapsack_solver = QuadraticKnapsackSolverA{Float64}()
-knapsack_solver = ContinuousKnapsackSolver((N + 1) * (N + 2))
+# knapsack_solver = ContinuousKnapsackSolver((N + 1) * (N + 2))
 blend = :subcell
 
 shock_capturing = false

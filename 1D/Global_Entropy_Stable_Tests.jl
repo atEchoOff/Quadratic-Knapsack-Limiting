@@ -149,7 +149,7 @@ cache = (;
            fv_operators = (; Δ, R),
            blend = :subcell,
            knapsack_solver = knapsack_solver,
-        physics = (; equations, volume_flux = flux_central, surface_flux = flux_lax_friedrichs),
+        physics = (; equations, volume_flux = volume_flux, surface_flux = flux_lax_friedrichs),
         shock_capturing = shock_capturing,
         VDM_inv = inv(rd.VDM)
         )

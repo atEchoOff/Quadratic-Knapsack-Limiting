@@ -62,7 +62,11 @@ function rhs!(du, u, cache, t)
         (; blend) = cache
         
         # optimization targets
-        b = sum(cache.B * psi.(u_element, equations)) + sum(dot.(v, rhs_vol_low))
+        # println(cache.B)
+        # println(psi.(u_element, equations))
+        # println(cache.B * psi.(u_element, equations))
+        # println(sum(dot.(v, rhs_vol_low)))
+        b = sum(cache.B * psi.(u_element, equations))[1] + sum(dot.(v, rhs_vol_low))
 
         ### Shock capturing optimization target
         if shock_capturing
@@ -129,19 +133,12 @@ function rhs!(du, u, cache, t)
     du ./= -md.J
 end
 
-psi(u, ::CompressibleEulerEquations1D) = u[2] # rho * v1
+psi(u, ::InviscidBurgersEquation1D) = 1/6 * u .^ 3
 
-function initial_condition_basic(x, t, equations::CompressibleEulerEquations1D)           
-    # rho = 1.0 + exp(-100 * (x-0.25)^2)
-    # # rho = 1.0 + .75 * (x > 0)
-    # u = 0.0
-    # p = rho^equations.gamma
+function initial_condition_basic(x, t, equations::InviscidBurgersEquation1D)
+    u = exp(-10 * x^2)
 
-    u = .1
-    rho = x + 3.0
-    p = .1
-
-    return SVector(prim2cons(SVector(rho, u, p), equations))
+    return SVector(u)
 end
 
 initial_condition = initial_condition_basic
@@ -154,7 +151,7 @@ rd = RefElemData(Line(), SBP(), N)
 md = MeshData((VX,), EToV, rd)
 md = make_periodic(md)
 
-equations = CompressibleEulerEquations1D(1.4)
+equations = InviscidBurgersEquation1D()
 
 u0 = rd.Pq * initial_condition.(md.xq, 0.0, equations)
 u = copy(u0)
@@ -181,7 +178,7 @@ cache = (;
         )
 
 # dt = 0.25 * estimate_h(rd, md) * (1 / (2 * rd.N + 1))
-tspan = (0, .4)
+tspan = (0, 3.0)
 ode = ODEProblem(rhs!, u, tspan, cache)
 @time sol = solve(ode, timestepper, dt = dt, abstol=abstol, reltol=reltol, saveat=LinRange(tspan..., 10), callback=AliveCallback(alive_interval=1000), adaptive=adaptive)
 

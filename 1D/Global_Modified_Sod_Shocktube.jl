@@ -168,7 +168,7 @@ cache = (;
            bc = [u0[1, 1] u0[end, end]],
            VDM_inv = inv(rd.VDM),
         knapsack_solver = knapsack_solver,
-        blend = :subcell, physics = (; equations, volume_flux = flux_central, surface_flux = flux_lax_friedrichs, gamma = gamma),
+        blend = :subcell, physics = (; equations, volume_flux = volume_flux, surface_flux = flux_lax_friedrichs, gamma = gamma),
         shock_capturing = shock_capturing,
         );
 

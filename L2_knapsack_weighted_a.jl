@@ -46,7 +46,7 @@ function quadratic_knapsack_solverA!(x, a, b, upper_bounds; tol = 100 * eps(), m
             break
         end
 
-        deriv = a' * (sgn_a .* (x .< upper_bounds) .* (lambdak * sgn_a .>= 0.0))
+        deriv = a' * (sgn_a .* (x .< upper_bounds) .* (lambdak * sgn_a .>= 0.0) .* (sgn_a .> 0.0))
 
         # Compute the next root
         lambdak -= f_val / deriv

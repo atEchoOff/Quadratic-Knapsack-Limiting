@@ -189,7 +189,7 @@ cache = (;
            nodewise_shock_capturing = nodewise_shock_capturing,
            blend = blend,
         knapsack_solver = knapsack_solver,
-        physics = (; equations, volume_flux = flux_central, surface_flux = flux_lax_friedrichs, gamma = gamma),
+        physics = (; equations, volume_flux = volume_flux, surface_flux = flux_lax_friedrichs, gamma = gamma),
         );
 
 tspan = (0, 0.4)

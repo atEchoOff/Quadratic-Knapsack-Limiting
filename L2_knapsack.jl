@@ -19,7 +19,6 @@ function quadratic_knapsack_solver!(x, a, b, upper_bounds, w; tol = 100 * eps(),
     # maxit is a huge upper bound here. The iteration will take at most N + 1 iterations, but usually takes around 1 - 3, and rarely 4.
     # Note also, if maxit is reached, it likely implies that b is negative, so the problem needs cleaning
 
-
     ### Optional infeasibility check, uncomment to see if issues are caused by infeasibility
     # I = upper_bounds .* (a .< tol)
 
@@ -29,6 +28,14 @@ function quadratic_knapsack_solver!(x, a, b, upper_bounds, w; tol = 100 * eps(),
     #     println("infeasibility (this should never happen in a well-posed problem)")
     #     return I
     # end
+
+    # Problem infeasibility... this is bad
+    # Just return low order solution... best we can do
+    if b <= 0.0
+        x .= 0.0
+        # println("Infeasibility Detected")
+        return x
+    end
 
     # original_b = b # for sanity check
     b = a' * upper_bounds - b
@@ -45,6 +52,10 @@ function quadratic_knapsack_solver!(x, a, b, upper_bounds, w; tol = 100 * eps(),
     itercount = 0 # for sanity check
 
     a_over_w = a ./ w
+
+    # sgn_a = sign.(a_over_w)
+    # a_over_w .= abs.(a_over_w)
+    # a .= abs.(a)
     
     for _ in range(0, maxit)
         # Clip current solution within feasible domain
@@ -65,12 +76,16 @@ function quadratic_knapsack_solver!(x, a, b, upper_bounds, w; tol = 100 * eps(),
         itercount += 1 # for sanity check
     end
 
+    # x .= sgn_a .* x
+
     x .= upper_bounds .- x
 
     ### These are all my sanity checks. Non well-posed problems may break them, so if issues are found, uncomment these and the sanity check comments above for checking.
     if itercount > 3
         println("The itercount was $itercount")
     end
+
+    # @assert all(x .== 1.0)
 
     # @assert itercount <= 4
 

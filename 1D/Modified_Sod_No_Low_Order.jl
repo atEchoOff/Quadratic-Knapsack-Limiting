@@ -4,6 +4,8 @@ using LinearAlgebra
 using Trixi
 using OrdinaryDiffEq
 using Plots
+using CSV
+using Tables
 
 include("../L1_knapsack.jl")
 include("../L2_knapsack.jl")
@@ -14,8 +16,12 @@ function rhs!(du, u, cache, t)
     (; Q_skew) = cache.high_order_operators
     (; Q_skew_low) = cache.low_order_operators    
     (; Δ, R) = cache.fv_operators
-    (; equations, volume_flux, surface_flux) = physics
-    (; VDM_inv, shock_capturing, nodewise_shock_capturing) = cache
+    (; equations, volume_flux, surface_flux, gamma) = physics
+    (; bc, VDM_inv, shock_capturing, nodewise_shock_capturing) = cache
+
+    # Boundary conditions (set end points to initial conditions)
+    u[1, 1] = bc[:, 1]
+    u[end, end] = bc[:, 2]
 
     # interface flux
     uf = rd.Vf * u
@@ -29,19 +35,23 @@ function rhs!(du, u, cache, t)
     
     A = fill!(similar(du, size(du, 1), size(du, 1)), zero(eltype(du)))
     a = zeros(size(du, 1), size(du, 1))
-    for e in 1:md.num_elements
-
+    for e in 1:md.num_elements        
         fill!(rhs_vol_high, zero(eltype(rhs_vol_high)))
         fill!(rhs_vol_low, zero(eltype(rhs_vol_low)))
-    
+        
         # high order update
         u_element = view(u, :, e)
         v = cons2entropy.(u_element, equations)
         for i in eachindex(u_element), j in eachindex(u_element)            
             if i > j
+                ## Chan's flux function
                 fij = volume_flux(u_element[i], u_element[j], 1, equations)
+                ##
+                ## Raymond's flux function
+                # fij = volume_flux(u_element[i], u_element[j], gamma);
+                ##
                 FH_ij = Q_skew[i, j] * fij
-                rhs_vol_high[i] += FH_ij
+                rhs_vol_high[i] +=  FH_ij
                 rhs_vol_high[j] += -FH_ij
 
                 FL_ij = zero(eltype(rhs_vol_low))
@@ -58,11 +68,9 @@ function rhs!(du, u, cache, t)
                 A[j,i] = -A[i, j]
             end
         end
-
-        (; blend) = cache
         
-        # optimization targets
-        b = sum(cache.B * psi.(u_element, equations)) + sum(dot.(v, rhs_vol_low))
+        # optimization target
+        b = sum(cache.B * psi.(u_element, equations))
 
         ### Shock capturing optimization target
         if shock_capturing
@@ -81,8 +89,10 @@ function rhs!(du, u, cache, t)
                 ϵ = 0.5 * (1.0 - sin(π * (s - s0) / (2 * κ)))
             end
 
-            b = (1 - .01 * ϵ) * b
+            b = (1 - .02 * ϵ) * b
         end
+
+        (; blend) = cache
 
         if blend == :elementwise
             # 1. elementwise blending of rhs_vol_high/low
@@ -90,25 +100,23 @@ function rhs!(du, u, cache, t)
             θ = b / denom
             θ = max(0.0, min(1.0, θ))
             view(du, :, e) .+= rd.M \ (θ * rhs_vol_high + (1 - θ) * rhs_vol_low)
-
         elseif blend == :subcell
-            # 2. subcell Δ, R blending of rhs_vol_high/low        
-            # @assert b < 100 * eps()
-            a = v' * Δ * Diagonal(R * (rhs_vol_low - rhs_vol_high))
+            a = v' * Δ * Diagonal(R * rhs_vol_high)
+
+
+            # Call the Knapsack Solver
             a = vec(a)
-
             θ = cache.knapsack_solver(a, b)
-
+            
             if nodewise_shock_capturing
-                epsilon = 120.0
+                epsilon = 240.0
                 # @. a *= -log(1/e * θ)
                 # @. a *= 1 / cbrt(θ)
-                @. a *= 1 - 4 * N^2 * log(θ)
-                # @. a *= 1 + N*sqrt(-log(θ))
+                @. a *= 1 - 4 * N^2 * log(min(θ + 1 / (2N * K), 1))
                 # # @. a *= (1 - 2 * N * (K / 64) * log(θ + 1e-8))
                 # @. a *= -epsilon * θ + (1 + epsilon)
                 # # @. a *= (-sqrt(epsilon) * θ + sqrt(epsilon))^2 + 1
-                # @. a *= -epsilon * min(1, θ + 1e-1) + (1 + epsilon)
+                # @. a *= -epsilon * min(1, θ + 1e-3) + (1 + epsilon)
 
                 θ = cache.knapsack_solver(a, b)
                 # @. a *= -epsilon * θ + (1 + epsilon)
@@ -116,12 +124,7 @@ function rhs!(du, u, cache, t)
 
                 # θ = cache.knapsack_solver(a, b)
             end
-
-            view(du, :, e) .+= rd.M \ (Δ * (Diagonal(θ) * R * rhs_vol_high + Diagonal(1 .- θ) * R * rhs_vol_low))
-
-        else
-
-            view(du, :, e) .+= rd.M \ rhs_vol_high
+            view(du, :, e) .+= rd.M \ (Δ * (Diagonal(θ) * R * rhs_vol_high))
         end
     end
     
@@ -131,32 +134,39 @@ end
 
 psi(u, ::CompressibleEulerEquations1D) = u[2] # rho * v1
 
-function initial_condition_basic(x, t, equations::CompressibleEulerEquations1D)           
-    # rho = 1.0 + exp(-100 * (x-0.25)^2)
-    # # rho = 1.0 + .75 * (x > 0)
-    # u = 0.0
-    # p = rho^equations.gamma
-
-    u = .1
-    rho = x + 3.0
-    p = .1
-
-    return SVector(prim2cons(SVector(rho, u, p), equations))
+function initial_condition_modified_sod(x, t, equations::CompressibleEulerEquations1D)
+    if x[1] < .2
+        rho = 1.0
+        v1 = .75
+        p = 1.0
+    else
+        rho = .125
+        v1 = 0.0
+        p = .1
+    end
+    return prim2cons(SVector(rho, v1, p), equations)
 end
 
-initial_condition = initial_condition_basic
+function domain_change(x)
+    a = 0.0;
+    b = 1.0;
+    return (b - a)/2 * (x + 1) + a;
+end
 
-initial_limiting_coefficients(R, u; delta=0) = 1 .- delta * rand(size(R, 1))
+### Set Initial conditions
+initial_condition = initial_condition_modified_sod
 
 rd = RefElemData(Line(), SBP(), N) 
 (VX, ), EToV = uniform_mesh(Line(), K)
 
 md = MeshData((VX,), EToV, rd)
-md = make_periodic(md)
 
-equations = CompressibleEulerEquations1D(1.4)
+gamma = 1.4
+equations = CompressibleEulerEquations1D(gamma)
 
-u0 = rd.Pq * initial_condition.(md.xq, 0.0, equations)
+x = domain_change.(rd.Vp * md.x)
+x0 = domain_change.(md.xq)
+u0 = rd.Pq * initial_condition.(x0, 0.0, equations)
 u = copy(u0)
 
 # low order operators
@@ -166,40 +176,33 @@ u = copy(u0)
 Δ = diagm(0 => -ones(rd.N+1), 1=>ones(rd.N+1))[1:end-1,:]
 R = tril(ones(size(Δ')), -1)
 
+# Build the cache for RHS!
 cache = (; 
            rd, md, 
            B = Diagonal([-1; zeros(rd.N-1); 1]),
            high_order_operators=(; Q_skew = rd.M * rd.Dr - (rd.M * rd.Dr)'), 
            low_order_operators=(; Q_skew_low = Qr-Qr'), 
-           fv_operators = (; Δ, R), 
+           fv_operators = (; Δ, R),
+           bc = [u0[1, 1] u0[end, end]],
+           VDM_inv = inv(rd.VDM),
+           shock_capturing = shock_capturing,
+           nodewise_shock_capturing = nodewise_shock_capturing,
            blend = blend,
-           knapsack_solver = knapsack_solver,
-        physics = (; equations, volume_flux = volume_flux, surface_flux = flux_lax_friedrichs),
-        shock_capturing = shock_capturing,
-        nodewise_shock_capturing = nodewise_shock_capturing,
-        VDM_inv = inv(rd.VDM)
-        )
+        knapsack_solver = knapsack_solver,
+        physics = (; equations, volume_flux = volume_flux, surface_flux = flux_lax_friedrichs, gamma = gamma),
+        );
 
-# dt = 0.25 * estimate_h(rd, md) * (1 / (2 * rd.N + 1))
 tspan = (0, .4)
 ode = ODEProblem(rhs!, u, tspan, cache)
-@time sol = solve(ode, timestepper, dt = dt, abstol=abstol, reltol=reltol, saveat=LinRange(tspan..., 10), callback=AliveCallback(alive_interval=1000), adaptive=adaptive)
+
+sol = solve(ode, timestepper, dt = dt, abstol=abstol, reltol=reltol, callback=AliveCallback(alive_interval=1000), adaptive=adaptive)
+
+println("Completed run with N = $N, K = $K, knapsack_solver = $(typeof(knapsack_solver)), timestepper = $(typeof(timestepper)), abstol = $abstol, reltol = $reltol")
+
+u = sol.u[end]
+u_plot = rd.Vp * getindex.(u, 1)
+plot(x, u_plot, leg=false)
 
 # @gif for u in sol.u
-#     plot(rd.Vp * md.x, rd.Vp * getindex.(u, 1), leg=false, ylims=(0, 2))
+#     plot(x, rd.Vp * getindex.(u, 1), leg=false, ylims=(0, 1))
 # end
-u = sol.u[end]
-# plot!(rd.Vp * md.x, getindex.(initial_condition.(rd.Vp * md.x, tspan[2], equations), 1), leg=false)
-
-rq, wq = gauss_quad(0, 0, N+2)
-Vq = vandermonde(Line(), rd.N, rq) / rd.VDM
-wJq = Diagonal(wq) * (Vq * md.J)
-xq = Vq * md.x
-
-L1_error = sum(wJq .* map(x -> sum(abs.(x)), initial_condition.(xq, sol.t[end], equations) - Vq * sol.u[end]))
-L2_error = sqrt(sum(wJq .* map(x -> sum(x.^2), initial_condition.(xq, sol.t[end], equations) - Vq * sol.u[end])))
-
-println("N = $N, K1D = $(md.num_elements), L1_error = $L1_error, L2_error = $L2_error")
-
-
-plot(rd.Vp * md.x, rd.Vp * getindex.(u, 1), leg=false)

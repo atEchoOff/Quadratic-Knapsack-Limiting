@@ -1,6 +1,6 @@
 include("common.jl")
 tspan = (0, 0.4)
-psi(u, ::CompressibleEulerEquations1D) = u[2] # rho * v1
+psi(u, ::CompressibleEulerEquations1D) = u[2]
 
 function domain_change(x)
     a = 0.0
@@ -28,7 +28,7 @@ cache = (;
            nodewise_shock_capturing = nodewise_shock_capturing,
            blend = blend,
         knapsack_solver = knapsack_solver,
-        physics = (; equations, volume_flux = volume_flux, surface_flux = flux_lax_friedrichs),
+        physics = (; equations, volume_flux = volume_flux, surface_flux = flux_lax_friedrichs, gamma = gamma),
         );
 ode = ODEProblem(rhs!, u, tspan, cache)
 
@@ -38,7 +38,7 @@ println("Completed run with N = $N, K = $K, knapsack_solver = $(typeof(knapsack_
 
 u = sol.u[end]
 u_plot = rd.Vp * getindex.(u, 1)
-plot(domain_change.(rd.Vp * md.x), u_plot, leg=false)
+plot(x, u_plot, leg=false)
 
 # @gif for u in sol.u
 #     plot(x, rd.Vp * getindex.(u, 1), leg=false, ylims=(0, 1))

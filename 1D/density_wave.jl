@@ -1,12 +1,12 @@
 include("common.jl")
-tspan = (0.0, 4.0)
-psi(u, ::InviscidBurgersEquation1D) = (1/6 * u .^ 3)[1]
+tspan = (0., 4.)
+psi(u, ::CompressibleEulerEquations1D) = u[2]
 
 md = make_periodic(md)
 
-equations = InviscidBurgersEquation1D()
+equations = CompressibleEulerEquations1D(1.4)
 
-initial_condition = initial_condition_burgers
+initial_condition = initial_condition_density_wave
 
 u0 = rd.Pq * initial_condition.(md.xq, 0.0, equations)
 u = copy(u0)
@@ -41,13 +41,8 @@ Vq = vandermonde(Line(), rd.N, rq) / rd.VDM
 wJq = Diagonal(wq) * (Vq * md.J)
 xq = Vq * md.x
 
-function true_sol(x)
-    # return SVector{1}(.25 * x + .5)
-    return SVector{1}(.2 * x)
-end
-
-L1_error = sum(wJq .* map(x -> sum(abs.(x)), true_sol.(xq) - Vq * sol.u[end]))
-L2_error = sqrt(sum(wJq .* map(x -> sum(x.^2), true_sol.(xq) - Vq * sol.u[end])))
+L1_error = sum(wJq .* map(x -> sum(abs.(x)), initial_condition.(xq, sol.t[end], equations) - Vq * sol.u[end]))
+L2_error = sqrt(sum(wJq .* map(x -> sum(x.^2), initial_condition.(xq, sol.t[end], equations) - Vq * sol.u[end])))
 
 println("N = $N, K1D = $(md.num_elements), L1_error = $L1_error, L2_error = $L2_error")
 

@@ -15,6 +15,21 @@ function (s::QuadraticKnapsackSolver)(a, b; upper_bounds=ones(length(a)), w=ones
     return quadratic_knapsack_solver!(x, a, b, upper_bounds, w; s.tol)
 end
 
+function smooth_clamp(x, b)
+    x = x / b
+    if x < 0
+        return 0
+    elseif x > 1
+        return 1
+    elseif x < .1
+        return -100x^3 + 20x^2
+    elseif x > .9
+        return 1 - (-100*(1-x)^3 + 20*(1-x)^2)
+    else
+        return x
+    end
+end
+
 function quadratic_knapsack_solver!(x, a, b, upper_bounds, w; tol = 100 * eps(), maxit=200)
     # maxit is a huge upper bound here. The iteration will take at most N + 1 iterations, but usually takes around 1 - 3, and rarely 4.
     # Note also, if maxit is reached, it likely implies that b is negative, so the problem needs cleaning

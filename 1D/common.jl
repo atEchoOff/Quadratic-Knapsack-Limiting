@@ -81,7 +81,7 @@ function rhs!(du, u, cache, t)
 
         if blend == :elementwise
             # 1. elementwise blending of rhs_vol_high/low
-            denom = (sum(dot.(v, rhs_vol_high - rhs_vol_low)) + 100 * eps())
+            denom = -(sum(dot.(v, rhs_vol_high - rhs_vol_low)) + 100 * eps())
             θ = b / denom
             θ = max(0.0, min(1.0, θ))
             view(du, :, e) .+= rd.M \ (θ * rhs_vol_high + (1 - θ) * rhs_vol_low)

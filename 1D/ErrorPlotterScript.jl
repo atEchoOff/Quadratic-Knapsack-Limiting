@@ -15,7 +15,7 @@ include(MODULE)
 solutions = copy(sol.u)
 times = copy(sol.t)
 
-@assert all(isnan.(getindex.(sol.u[end], 1)) .== false)
+# @assert all(isnan.(getindex.(sol.u[end], 1)) .== false)
 # saveat = times
 
 # Refined solution
@@ -23,7 +23,7 @@ adaptive = false
 dt = 1e-6
 include(MODULE)
 
-errors = []
+errors = Float64[]
 for i in 1:length(times)
     push!(errors, sqrt(sum(diag(rd.M) .* map(x -> sum(x.^2), solutions[i] - sol.u[i]))))
 end

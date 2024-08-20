@@ -14,10 +14,10 @@ include("../Non_knapsack.jl")
 include("../Smooth_Knapsack.jl")
 include("initial_conditions.jl")
 
-N = 7
-K = 32
+N = 4
+K = 256
 
-# knapsack_solver = QuadraticKnapsackSolver{Float64}()
+knapsack_solver = QuadraticKnapsackSolver{Float64}()
 # knapsack_solver = NonKnapsackSolver{Float64}()
 # knapsack_solver = QuadraticKnapsackSolverA{Float64}()
 # knapsack_solver = ContinuousKnapsackSolver((N + 2))
@@ -25,7 +25,7 @@ K = 32
 
 total_error_estimates = []
 
-# volume_flux = flux_central
+volume_flux = flux_central
 # volume_flux = flux_ranocha
 # volume_flux = flux_ec
 blend = :subcell
@@ -36,7 +36,7 @@ nodewise_shock_capturing = false
 abstol = 1e-6
 reltol = 1e-4
 
-timestepper = RDPK3SpFSAL35()
-adaptive = false
+timestepper = SSPRK43()
+adaptive = true
 dt = 1e-4
-saveat = 1e-4
+saveat = .05

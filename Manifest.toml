@@ -2,7 +2,7 @@
 
 julia_version = "1.10.3"
 manifest_format = "2.0"
-project_hash = "a6e0186a6606a23971fbd7e4078e5db003c54606"
+project_hash = "8b977a053922dc1a7a7f543903399861e0a27198"
 
 [[deps.ADTypes]]
 git-tree-sha1 = "016833eb52ba2d6bea9fcb50ca295980e728ee24"
@@ -1122,6 +1122,22 @@ weakdeps = ["ChainRulesCore", "SparseArrays", "Statistics"]
     LinearMapsChainRulesCoreExt = "ChainRulesCore"
     LinearMapsSparseArraysExt = "SparseArrays"
     LinearMapsStatisticsExt = "Statistics"
+
+[[deps.LinearOperators]]
+deps = ["FastClosures", "LinearAlgebra", "Printf", "Requires", "SparseArrays", "TimerOutputs"]
+git-tree-sha1 = "ae5d90280094348c32fda8bc8b5a88bb16514d43"
+uuid = "5c8ed15e-5a4c-59e4-a42b-c7e8811fb125"
+version = "2.8.0"
+
+    [deps.LinearOperators.extensions]
+    LinearOperatorsCUDAExt = "CUDA"
+    LinearOperatorsChainRulesCoreExt = "ChainRulesCore"
+    LinearOperatorsLDLFactorizationsExt = "LDLFactorizations"
+
+    [deps.LinearOperators.weakdeps]
+    CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
+    ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
+    LDLFactorizations = "40e66cde-538c-5869-a4ad-c39174c6795b"
 
 [[deps.LinearSolve]]
 deps = ["ArrayInterface", "ChainRulesCore", "ConcreteStructs", "DocStringExtensions", "EnumX", "FastLapackInterface", "GPUArraysCore", "InteractiveUtils", "KLU", "Krylov", "LazyArrays", "Libdl", "LinearAlgebra", "MKL_jll", "Markdown", "PrecompileTools", "Preferences", "RecursiveFactorization", "Reexport", "SciMLBase", "SciMLOperators", "Setfield", "SparseArrays", "Sparspak", "StaticArraysCore", "UnPack"]

@@ -4,13 +4,13 @@ end
 
 function initial_condition_burgers(x, t, equations::InviscidBurgersEquation1D)
     # u = exp(-10 * x^2)
-    # if x < 0
-    #     u = 0.0
-    # else
-    #     u = 1.0
-    # end
+    if x < 0
+        u = 0.0
+    else
+        u = 1.0
+    end
 
-    u = x
+    # u = sign(x)
 
     return SVector(u)
 end

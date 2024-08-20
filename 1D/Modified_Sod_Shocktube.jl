@@ -1,5 +1,5 @@
 include("common.jl")
-tspan = (0, 0.4)
+tspan = (0, 0.2)
 psi(u, ::CompressibleEulerEquations1D) = u[2] # rho * v1
 
 function domain_change(x)
@@ -8,11 +8,18 @@ function domain_change(x)
     return (b - a)/2 * (x + 1) + a
 end
 
+# Reset mesh data for domain change
+VX = domain_change.(VX)
+md = MeshData((VX, ), EToV, rd)
+
+# low order operators
+(Qr,), E = sparse_low_order_SBP_operators(rd)
+
 equations = CompressibleEulerEquations1D(1.4)
 
 initial_condition = initial_condition_modified_sod
 
-u0 = rd.Pq * initial_condition.(domain_change.(md.xq), 0.0, equations)
+u0 = rd.Pq * initial_condition.(md.xq, 0.0, equations)
 u = copy(u0)
 
 # Build the cache for RHS!

@@ -1,6 +1,7 @@
 [deps]
 DelaunayTriangulation = "927a84f5-c5f4-47a5-9785-b46e178433df"
 Dierckx = "39dd38d3-220a-591b-8e3c-4c3a8c710a94"
+Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 GridInterpolations = "bb4c363b-b914-514b-8517-4eb369bc008a"
 InferOpt = "4846b161-c94e-4150-8dac-c7ae193c601f"
 Interpolations = "a98d9a8b-a2ab-59e6-89dd-64a1c18fca59"

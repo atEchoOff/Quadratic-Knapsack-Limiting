@@ -1,6 +1,14 @@
-MODULE = "Modified_Sod_Shocktube.jl"
-
+include("../ObjectTransitioner.jl")
 include("Running_Interface.jl")
+
+MODULE = "density_wave.jl"
+
+@assert adaptive == false
+@assert dt == 1e-6
+
+println("Running $MODULE, with knapsack_solver = $(nameof(typeof(knapsack_solver))), volume_flux = $(nameof(typeof(volume_flux))) timestepper = $(nameof(typeof(timestepper))). Last, (N, M) = ($N, $K). ENSURE CORRECT BEFORE PROCEEDING")
+
+sleep(15)
 include(MODULE)
 
 good = copy(sol.u[end])
@@ -9,7 +17,7 @@ t = Float64[]
 
 for i in 2 .^ ((0:35) * .2)
     global dt
-    dt = i * 1e-5
+    dt = i * 5e-5
     push!(t, dt)
 
     include(MODULE)
@@ -19,4 +27,9 @@ for i in 2 .^ ((0:35) * .2)
     push!(Li, nm)
 end
 
-println(fit(log.(t), log.(Li), 1))
+t_nonnan = t[isnan.(Li) .== false]
+Li_nonnan = Li[isnan.(Li) .== false]
+println(fit(log.(t_nonnan), log.(Li_nonnan), 1))
+
+# Save all methods to object transfer
+save(nameof(typeof(knapsack_solver)), Li)

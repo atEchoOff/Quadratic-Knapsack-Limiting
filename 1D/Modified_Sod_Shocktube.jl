@@ -45,7 +45,7 @@ println("Completed run with N = $N, K = $K, knapsack_solver = $(typeof(knapsack_
 
 u = sol.u[end]
 u_plot = rd.Vp * getindex.(u, 1)
-plot(domain_change.(rd.Vp * md.x), u_plot, leg=false)
+plot(rd.Vp * md.x, u_plot, leg=false)
 
 # @gif for u in sol.u
 #     plot(x, rd.Vp * getindex.(u, 1), leg=false, ylims=(0, 1))

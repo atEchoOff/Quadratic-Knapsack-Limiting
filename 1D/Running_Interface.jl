@@ -14,9 +14,12 @@ include("../Non_knapsack.jl")
 include("../Smooth_Knapsack.jl")
 include("initial_conditions.jl")
 
-N = 4
-K = 256
+N = 7
+K = 32
 
+# if nameof(typeof(knapsack_solver)) == :ContinuousKnapsackSolver
+#     knapsack_solver = ContinuousKnapsackSolver((N + 2))
+# end
 knapsack_solver = QuadraticKnapsackSolver{Float64}()
 # knapsack_solver = NonKnapsackSolver{Float64}()
 # knapsack_solver = QuadraticKnapsackSolverA{Float64}()
@@ -36,7 +39,7 @@ nodewise_shock_capturing = false
 abstol = 1e-6
 reltol = 1e-4
 
-timestepper = SSPRK43()
-adaptive = true
-dt = 1e-4
+timestepper = RK4()
+adaptive = false
+dt = 1e-5
 saveat = .05

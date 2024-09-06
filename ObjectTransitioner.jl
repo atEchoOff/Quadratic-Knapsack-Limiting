@@ -1,10 +1,4 @@
-macro Name(arg)
-    string(arg)
- end
-
-function save(name)
-    obj = getfield(Main, name)
-
+function save(name, obj)
     open("object_transfer/$name.txt", "w") do io
         println(io, string(obj))
     end

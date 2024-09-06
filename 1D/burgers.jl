@@ -1,5 +1,5 @@
 include("common.jl")
-tspan = (0.0, 8.0)
+tspan = (0.0, 3.0)
 psi(u, ::InviscidBurgersEquation1D) = (1/6 * u .^ 3)[1]
 
 md = make_periodic(md)
@@ -52,8 +52,8 @@ L2_error = sqrt(sum(wJq .* map(x -> sum(x.^2), true_sol.(xq) - Vq * sol.u[end]))
 println("N = $N, K1D = $(md.num_elements), L1_error = $L1_error, L2_error = $L2_error")
 
 
-plot(rd.Vp * md.x, rd.Vp * getindex.(u, 1), leg=false)
+# plot(rd.Vp * md.x, rd.Vp * getindex.(u, 1), leg=false)
 
-@gif for u in sol.u
-    plot(rd.Vp * md.x, rd.Vp * getindex.(u, 1), leg=false, ylims=(0., 1.2))
-end
+# @gif for u in sol.u
+#     plot(rd.Vp * md.x, rd.Vp * getindex.(u, 1), leg=false, ylims=(0., 1.2))
+# end

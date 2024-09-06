@@ -1,5 +1,5 @@
 include("common.jl")
-tspan = (0, .4)
+tspan = (0, 3.)
 psi(u, ::LinearScalarAdvectionEquation1D) = .5 * u^2
 
 md = make_periodic(md)

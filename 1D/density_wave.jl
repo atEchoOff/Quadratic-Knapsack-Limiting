@@ -1,5 +1,5 @@
 include("common.jl")
-tspan = (0., 4.)
+tspan = (0., 10.)
 psi(u, ::CompressibleEulerEquations1D) = u[2]
 
 md = make_periodic(md)
@@ -47,4 +47,4 @@ L2_error = sqrt(sum(wJq .* map(x -> sum(x.^2), initial_condition.(xq, sol.t[end]
 println("N = $N, K1D = $(md.num_elements), L1_error = $L1_error, L2_error = $L2_error")
 
 
-plot(rd.Vp * md.x, rd.Vp * getindex.(u, 1), leg=false)
+# plot(rd.Vp * md.x, rd.Vp * getindex.(u, 1), leg=false)

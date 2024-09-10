@@ -1,7 +1,7 @@
 function initial_condition_density_wave(coords, t, ::CompressibleEulerEquations2D)
     x, y = coords
 
-    rho = 1 + sin(pi * (x - .5 * t))^2 * sin(pi * (y - t))^2
+    rho = .1 + sin(pi * (x - .5 * t))^2 * sin(pi * (y - t))^2
     v1 = .5
     v2 = 1.
     p = 1.0

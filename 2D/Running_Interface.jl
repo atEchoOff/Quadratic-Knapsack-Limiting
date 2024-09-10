@@ -14,13 +14,16 @@ include("initial_conditions.jl")
 N = 3
 K = 64
 
-knapsack_solver = QuadraticKnapsackSolver{Float64}()
+if nameof(typeof(knapsack_solver)) == :ContinuousKnapsackSolver
+    knapsack_solver = ContinuousKnapsackSolver((N + 1) * (N + 2))
+end
+# knapsack_solver = QuadraticKnapsackSolver{Float64}()
 # knapsack_solver = NonKnapsackSolver{Float64}()
 # knapsack_solver = QuadraticKnapsackSolverA{Float64}()
 # knapsack_solver = ContinuousKnapsackSolver((N + 1) * (N + 2))
 
 # volume_flux = flux_ranocha
-volume_flux = flux_central
+# volume_flux = flux_central
 # volume_flux = flux_shima_etal # useful for non ec solvers, for KHI
 
 blend = :subcell
@@ -31,6 +34,6 @@ abstol = 1e-6
 reltol = 1e-4
 
 timestepper = Tsit5()
-adaptive = true
+adaptive = false
 dt = 1e-4
-saveat = .05
+saveat = .01

@@ -2,7 +2,7 @@ MODULE = "density_wave.jl"
 
 println("Running $MODULE, with knapsack_solver = $(typeof(knapsack_solver)), volume_flux = $(typeof(volume_flux)) timestepper = $(typeof(timestepper)). ENSURE CORRECT BEFORE PROCEEDING")
 
-sleep(10)
+# sleep(10)
 
 result = ""
 

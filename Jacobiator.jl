@@ -8,7 +8,7 @@ function unroll(u)
     return vec(reinterpret(Float64, u))
 end
 
-function get_jacobian_rhs(du, u; epsilon=1e-3)
+function get_jacobian_rhs(du, u; epsilon=1e-6)
     m = size(u, 1)
     n = size(u, 2)
     d = length(u[1, 1])
@@ -20,9 +20,10 @@ function get_jacobian_rhs(du, u; epsilon=1e-3)
         u_forward = u + epsilon * roll_up(ei, m, n, d)
         u_backward = u - epsilon * roll_up(ei, m, n, d)
 
+        du_forward = copy(unroll(rhs!(du, u_forward, cache, 0.)))
+        du_backward = copy(unroll(rhs!(du, u_backward, cache, 0.)))
 
-
-        A[:, i] .= 1 / (2 * epsilon) * unroll(rhs!(du, u_forward, cache, 0.) - rhs!(du, u_backward, cache, 0.))
+        A[:, i] .= 1 / (2 * epsilon) * unroll(du_forward - du_backward)
     end
 
     return A

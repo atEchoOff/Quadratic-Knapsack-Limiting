@@ -15,7 +15,7 @@ times = copy(sol.t)
 
 errors = Float64[]
 for i in 1:length(times)
-    push!(errors, sqrt(sum(diag(rd.M) .* map(x -> sum(x.^2), initial_condition.(md.xq, times[i], equations, dist=Normal(0., 0.)) - sol.u[i]))))
+    push!(errors, sqrt(sum(diag(rd.M) .* map(x -> sum(x.^2), initial_condition.(md.xq, times[i], equations) - sol.u[i]))))
 end
 
 times = times[2:end]

@@ -6,7 +6,7 @@ L2 = find("QuadraticKnapsackSolver")
 La = find("QuadraticKnapsackSolverA")
 ES = find("NonKnapsackSolver")
 
-t = 2 .^ ((0:35) * .2) * 5e-6
+# t = 2 .^ ((0:35) * .2) * 5e-6
 
 plot(t, L1, lw=2, c=:red, label="L1", xaxis=:log, yaxis=:log)
 plot!(t, L2, lw=2, c=:blue, label="L2", xaxis=:log, yaxis=:log)

@@ -4,8 +4,6 @@ include("Running_Interface.jl")
 
 MODULE = "burgers.jl"
 
-@assert adaptive == false
-@assert dt == 1e-5
 
 println("Running $MODULE, with knapsack_solver = $(nameof(typeof(knapsack_solver))), volume_flux = $(nameof(typeof(volume_flux))) timestepper = $(nameof(typeof(timestepper))). ENSURE CORRECT BEFORE PROCEEDING")
 

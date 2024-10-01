@@ -251,6 +251,34 @@ function rhs!(du, u, cache, t)
                 # θ = cache.knapsack_solver(a, b)
             end
             view(du, :, e) .+= rd.M \ (Δ * (Diagonal(θ) * R * rhs_vol_high + Diagonal(1 .- θ) * R * rhs_vol_low))
+        elseif blend == :subcell_dynamic
+            a = map((a, b) -> a .* b, Δ' * v, (R * (rhs_vol_low - rhs_vol_high)))
+            a = reinterpret(Float64, a)
+
+            # Call the Knapsack Solver
+            a = vec(a)
+            θ = cache.knapsack_solver(a, b)
+
+            if nodewise_shock_capturing
+                epsilon = 240.0
+                # @. a *= -log(1/e * θ)
+                # @. a *= 1 / cbrt(θ)
+                # @. a *= 1 - 4 * N^2 * log(min(θ + 1 / (2N * K), 1))
+                # # @. a *= (1 - 2 * N * (K / 64) * log(θ + 1e-8))
+                # @. a *= -epsilon * θ + (1 + epsilon)
+                # # @. a *= (-sqrt(epsilon) * θ + sqrt(epsilon))^2 + 1
+                # @. a *= -epsilon * min(1, θ + 1e-3) + (1 + epsilon)
+
+                θ = cache.knapsack_solver(a, b)
+                @. a *= -epsilon * θ + (1 + epsilon)
+                # # @. a *= (-sqrt(epsilon) * θ + sqrt(epsilon))^2 + 1
+
+                # θ = cache.knapsack_solver(a, b)
+            end
+
+            θ = reinterpret(SVector{3, Float64}, θ)
+            
+            view(du, :, e) .+= rd.M \ (Δ * (map((θ, a, b) -> θ .* a + (SVector{3, Float64}(1, 1, 1) - θ) .* b, θ, R * rhs_vol_high, R * rhs_vol_low)))
         else
             view(du, :, e) .+= rd.M \ rhs_vol_high
         end

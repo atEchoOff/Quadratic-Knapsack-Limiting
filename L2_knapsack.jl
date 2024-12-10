@@ -96,9 +96,9 @@ function quadratic_knapsack_solver!(x, a, b, upper_bounds, w; tol = 100 * eps(),
     x .= upper_bounds .- x
 
     ### These are all my sanity checks. Non well-posed problems may break them, so if issues are found, uncomment these and the sanity check comments above for checking.
-    if itercount > 3
-        println("The itercount was $itercount")
-    end
+    # if itercount > 3
+    #     println("The itercount was $itercount")
+    # end
 
     # @assert all(x .== 1.0)
 

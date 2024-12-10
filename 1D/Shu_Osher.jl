@@ -1,10 +1,13 @@
 include("common.jl")
-tspan = (0, 0.2)
+using MAT
+
+
+tspan = (0, 1.8)
 psi(u, ::CompressibleEulerEquations1D) = u[2] # rho * v1
 
 function domain_change(x)
-    a = 0.0
-    b = 1.0
+    a = -5.
+    b = 5.
     return (b - a)/2 * (x + 1) + a
 end
 
@@ -17,7 +20,7 @@ md = MeshData((VX, ), EToV, rd)
 
 equations = CompressibleEulerEquations1D(1.4)
 
-initial_condition = initial_condition_modified_sod
+initial_condition = initial_condition_shu_osher
 
 u0 = rd.Pq * initial_condition.(md.xq, 0.0, equations)
 u = copy(u0)
@@ -27,8 +30,8 @@ cache = (;
            rd, md, 
            B = Diagonal([-1; zeros(rd.N-1); 1]),
            high_order_operators=(; Q_skew = rd.M * rd.Dr - (rd.M * rd.Dr)'), 
-           low_order_operators=(; Q_skew_low = Qr-Qr'), 
-           hyper_operator=(; Q_skew_hyper = Qr^3 - Qr'^3),
+           low_order_operators=(; Q_skew_low = Qr-Qr'),
+           hyper_operator=(; Q_skew_hyper = (Qr' - Qr)^3),
            fv_operators = (; Δ, R),
            bc = [u0[1, 1] u0[end, end]],
            VDM_inv = inv(rd.VDM),
@@ -46,8 +49,8 @@ println("Completed run with N = $N, K = $K, knapsack_solver = $(typeof(knapsack_
 
 u = sol.u[end]
 u_plot = rd.Vp * getindex.(u, 1)
-plot(rd.Vp * md.x, u_plot, leg=false)
 
-# @gif for u in sol.u
-#     plot(x, rd.Vp * getindex.(u, 1), leg=false, ylims=(0, 1))
-# end
+weno_sol = matread("1D/weno5_shuosher.mat")
+# plot(rd.Vp * md.x, u_plot, leg=false)
+plot(weno_sol["x"][1:5:end], weno_sol["rho"][1:5:end], label="WENO", w=2)
+plot!(vec(md.x), vec(getindex.(u, 1)), label="DG", w=2)

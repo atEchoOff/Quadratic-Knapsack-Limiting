@@ -33,8 +33,8 @@ function initial_condition_density_wave(x, t, equations::CompressibleEulerEquati
     # x = x - floor(x)
 
     u = 1.
-    # rho = sin(pi * (x - t))^2 + .1
-    rho = sin(8pi * (x - t))^2 + .1
+    rho = sin(pi * (x - t))^2 + .1
+    # rho = sin(8pi * (x - t))^2 + .1
     # rho = 1 + .98 * sin(2π * x)
     # rho = sin(pi * (x - t))^2 + .1 + rand(dist)
     # rho = (x - t) - floor(x - t) + .1
@@ -65,9 +65,23 @@ function initial_condition_modified_sod(x, t, equations::CompressibleEulerEquati
         v1 = .75
         p = 1.0
     else
+        # rho = .01
         rho = .125
         v1 = 0.0
         p = .1
+    end
+    return prim2cons(SVector(rho, v1, p), equations)
+end
+
+function initial_condition_shu_osher(x, t, equations::CompressibleEulerEquations1D)
+    if x[1] < -4
+        rho = 3.857143
+        v1 = 2.629369
+        p = 10.3333 
+    else
+        rho = 1 + .2 * sin(5 * x[1])
+        v1 = 0.0
+        p = 1.0
     end
     return prim2cons(SVector(rho, v1, p), equations)
 end

@@ -28,7 +28,7 @@ cache = (;
            B = Diagonal([-1; zeros(rd.N-1); 1]),
            high_order_operators=(; Q_skew = rd.M * rd.Dr - (rd.M * rd.Dr)'), 
            low_order_operators=(; Q_skew_low = Qr-Qr'), 
-           hyper_operator=(; Q_skew_hyper = Qr^3 - Qr'^3),
+           hyper_operator=(; Q_skew_hyper = Qr-Qr'),
            fv_operators = (; Δ, R),
            bc = [u0[1, 1] u0[end, end]],
            VDM_inv = inv(rd.VDM),

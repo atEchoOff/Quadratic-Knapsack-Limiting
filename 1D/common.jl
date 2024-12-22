@@ -1,3 +1,22 @@
+function graph_laplacian!(vec, matr, operator; raw=false)
+    for i in eachindex(vec), j in eachindex(vec)
+        if i > j
+            FL_ij = zero(eltype(vec))
+            if abs(matr[i, j]) > 1e-12
+                fij = operator(i, j)
+                comp = matr[i, j]
+                if !raw
+                    comp = abs(comp)
+                end
+                FL_ij = comp * fij
+                vec[i] += FL_ij
+                vec[j] -= FL_ij
+            end
+        end
+    end
+end
+
+
 function rhs!(du, u, cache, t)
     (; physics, rd, md) = cache
     (; Q_skew) = cache.high_order_operators
@@ -35,47 +54,74 @@ function rhs!(du, u, cache, t)
         # high order update
         u_element = view(u, :, e)
         v = cons2entropy.(u_element, equations)
-        for i in eachindex(u_element), j in eachindex(u_element)            
-            if i > j
-                fij = volume_flux(u_element[i], u_element[j], 1, equations)
 
-                FH_ij = Q_skew[i, j] * fij
-                rhs_vol_high[i] +=  FH_ij
-                rhs_vol_high[j] += -FH_ij
-                
-                # True low order stuffs
-                if blend != :ELXF
-                    FL_ij = zero(eltype(rhs_vol_low))
-                    if abs(Q_skew_low[i, j]) > 1e-12
-                        nij = Q_skew_low[i, j] / abs(Q_skew_low[i, j])
-                        fij = surface_flux(u_element[i], u_element[j], SVector{1}(nij), equations)
-                        FL_ij = abs(Q_skew_low[i, j]) * fij
-                        rhs_vol_low[i] += FL_ij
-                        rhs_vol_low[j] -= FL_ij    
-                    end
-                end
+        high_order_operator(i, j) = volume_flux(u_element[i], u_element[j], 1, equations)
+        function low_order_operator(i, j)
+            nij = Q_skew_low[i, j] / abs(Q_skew_low[i, j])
+            return surface_flux(u_element[i], u_element[j], SVector{1}(nij), equations)
+        end
 
-                # Fake low order stuffs
-                if blend == :ELXF || blend == :NLXF
-                    FL_ij = zero(eltype(rhs_vol_low))
-                    if abs(Q_skew_low[i, j]) > 1e-12
-                        fij = u_element[i] - u_element[j]
-                        FL_ij = abs(Q_skew_low[i, j]) * fij
-                        rhs_vol_low[i] += FL_ij
-                        rhs_vol_low[j] -= FL_ij    
-                    end
-                end
-                if blend == :NLXF
-                    FL_ij = zero(eltype(rhs_vol_low))
-                    if abs(Q_skew_hyper[i, j]) > 1e-12
-                        fij = u_element[i] - u_element[j]
-                        FL_ij = abs(Q_skew_hyper[i, j]) * fij
-                        rhs_vol_hyper[i] += FL_ij
-                        rhs_vol_hyper[j] -= FL_ij
-                    end
-                end
+        graph_laplacian!(rhs_vol_high, Q_skew, high_order_operator; raw=true)
+        
+        if blend != :viscosity && blend != :hyperviscosity
+            graph_laplacian!(rhs_vol_low, Q_skew_low, low_order_operator, raw=false)
+        elseif blend == :viscosity || blend == :hyperviscosity
+            low_order_operator_diffusive(i, j) = u_element[i] - u_element[j]
+            graph_laplacian!(rhs_vol_low, Q_skew_low, low_order_operator_diffusive, raw=false)
+
+            if blend == :hyperviscosity
+                graph_laplacian!(rhs_vol_low, Q_skew_low, low_order_operator, raw=false) # to fix an issue with old code :(
+                graph_laplacian!(rhs_vol_hyper, Q_skew_hyper, low_order_operator_diffusive, raw=false)
+
+                safe_rhs_vol_hyper = deepcopy(rhs_vol_hyper)
+
+                low_order_2nd_derivative_diffusive(i, j) = safe_rhs_vol_hyper[i] - safe_rhs_vol_hyper[j]
+                fill!(rhs_vol_hyper, zero(eltype(rhs_vol_hyper)))
+                graph_laplacian!(rhs_vol_hyper, Q_skew_hyper, low_order_2nd_derivative_diffusive, raw=false)
             end
         end
+
+        # for i in eachindex(u_element), j in eachindex(u_element)            
+        #     if i > j
+        #         fij = volume_flux(u_element[i], u_element[j], 1, equations)
+
+        #         FH_ij = Q_skew[i, j] * fij
+        #         rhs_vol_high[i] +=  FH_ij
+        #         rhs_vol_high[j] += -FH_ij
+                
+        #         # True low order stuffs
+        #         if blend != :viscosity
+        #             FL_ij = zero(eltype(rhs_vol_low))
+        #             if abs(Q_skew_low[i, j]) > 1e-12
+        #                 nij = Q_skew_low[i, j] / abs(Q_skew_low[i, j])
+        #                 fij = surface_flux(u_element[i], u_element[j], SVector{1}(nij), equations)
+        #                 FL_ij = abs(Q_skew_low[i, j]) * fij
+        #                 rhs_vol_low[i] += FL_ij
+        #                 rhs_vol_low[j] -= FL_ij    
+        #             end
+        #         end
+
+        #         # Fake low order stuffs
+        #         if blend == :viscosity || blend == :hyperviscosity
+        #             FL_ij = zero(eltype(rhs_vol_low))
+        #             if abs(Q_skew_low[i, j]) > 1e-12
+        #                 fij = u_element[i] - u_element[j]
+        #                 FL_ij = abs(Q_skew_low[i, j]) * fij
+        #                 rhs_vol_low[i] += FL_ij
+        #                 rhs_vol_low[j] -= FL_ij    
+        #             end
+        #         end
+        #         if blend == :hyperviscosity
+        #             FL_ij = zero(eltype(rhs_vol_low))
+        #             if abs(Q_skew_hyper[i, j]) > 1e-12
+        #                 fij = u_element[i] - u_element[j]
+        #                 FL_ij = abs(Q_skew_hyper[i, j]) * fij
+        #                 rhs_vol_hyper[i] += FL_ij
+        #                 rhs_vol_hyper[j] -= FL_ij
+        #             end
+        #         end
+        #     end
+        # end
         
         # optimization target
         b = sum(cache.B * psi.(u_element, equations)) + sum(dot.(v, rhs_vol_low))
@@ -100,7 +146,7 @@ function rhs!(du, u, cache, t)
             b = (1 - shock_capturing * ϵ) * b
         end
 
-        if blend == :ELXF
+        if blend == :viscosity
             l = sum(dot.(v, rhs_vol_low))
             dΨ = sum(cache.B * psi.(u_element, equations))
             Ec = sum(dot.(v, rhs_vol_high))
@@ -117,7 +163,8 @@ function rhs!(du, u, cache, t)
             # end
 
             view(du, :, e) .+= rd.M \ r
-        elseif blend == :NLXF
+        elseif blend == :hyperviscosity
+            w = 1
             l = sum(dot.(v, rhs_vol_low))
             l_hyper = sum(dot.(v, rhs_vol_hyper))
             dΨ = sum(cache.B * psi.(u_element, equations))
@@ -125,14 +172,14 @@ function rhs!(du, u, cache, t)
             λ = 0
             b = dΨ + Ec
 
-            a = [l, l_hyper]
+            a = [l, w * l_hyper]
 
             # @assert l > -1000 * eps()
             # @assert l_hyper > -100000 * eps()
 
-            if !(l_hyper > -100 * eps()) && !isnan(l_hyper)
-                println(l_hyper)
-            end
+            # if !(l_hyper > -100 * eps()) && !isnan(l_hyper)
+            #     println(l_hyper)
+            # end
 
             # Need aTθ = b
 
@@ -144,7 +191,7 @@ function rhs!(du, u, cache, t)
 
             # println(θ)
 
-            r = (rhs_vol_high - θ[1] * rhs_vol_low - θ[2] * rhs_vol_hyper)
+            r = (rhs_vol_high - θ[1] * rhs_vol_low - w * θ[2] * rhs_vol_hyper)
 
             view(du, :, e) .+= rd.M \ r
         elseif blend == :elementwise

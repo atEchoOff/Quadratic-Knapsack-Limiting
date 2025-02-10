@@ -28,8 +28,12 @@ cache = (;
 
 # dt = 0.25 * estimate_h(rd, md) * (1 / (2 * rd.N + 1))
 ode = ODEProblem(rhs!, u, tspan, cache)
-@time sol = solve(ode, timestepper, dt = dt, abstol=abstol, reltol=reltol, saveat=saveat, callback=AliveCallback(alive_interval=1000), adaptive=adaptive)
 
+sol = load_save_if_exists()
+if sol == -1
+    sol = solve(ode, timestepper, dt = dt, abstol=abstol, reltol=reltol, saveat=saveat, callback=AliveCallback(alive_interval=1000), adaptive=adaptive)
+    save_run()
+end
 # @gif for u in sol.u
 #     plot(rd.Vp * md.x, rd.Vp * getindex.(u, 1), leg=false, ylims=(0, 2))
 # end

@@ -43,7 +43,11 @@ cache = (;
         );
 ode = ODEProblem(rhs!, u, tspan, cache)
 
-sol = solve(ode, timestepper, dt = dt, abstol=abstol, reltol=reltol, callback=AliveCallback(alive_interval=1000), adaptive=adaptive, saveat=saveat)
+sol = load_save_if_exists()
+if sol == -1
+    sol = solve(ode, timestepper, dt = dt, abstol=abstol, reltol=reltol, callback=AliveCallback(alive_interval=1000), adaptive=adaptive, saveat=saveat)
+    save_run()
+end
 
 println("Completed run with N = $N, K = $K, knapsack_solver = $(typeof(knapsack_solver)), timestepper = $(typeof(timestepper)), abstol = $abstol, reltol = $reltol")
 

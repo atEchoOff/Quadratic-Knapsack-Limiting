@@ -33,6 +33,8 @@ function rhs!(du, u, cache, t)
         u[end, end] = bc[:, 2]
     end
 
+    viscosities = Vector{Float64}(undef, K)
+
     # interface flux
     uf = rd.Vf * u
     uP = uf[md.mapP]
@@ -42,14 +44,13 @@ function rhs!(du, u, cache, t)
    
     rhs_vol_high = similar(du, size(du, 1))
     rhs_vol_low = similar(rhs_vol_high)
-    rhs_vol_hyper = similar(rhs_vol_high)
+    rhs_vol_visc = similar(rhs_vol_high)
     
     A = fill!(similar(du, size(du, 1), size(du, 1)), zero(eltype(du)))
-    a = zeros(size(du, 1), size(du, 1))
     for e in 1:md.num_elements        
         fill!(rhs_vol_high, zero(eltype(rhs_vol_high)))
         fill!(rhs_vol_low, zero(eltype(rhs_vol_low)))
-        fill!(rhs_vol_hyper, zero(eltype(rhs_vol_hyper)))
+        fill!(rhs_vol_visc, zero(eltype(rhs_vol_visc)))
         
         # high order update
         u_element = view(u, :, e)
@@ -63,65 +64,15 @@ function rhs!(du, u, cache, t)
 
         graph_laplacian!(rhs_vol_high, Q_skew, high_order_operator; raw=true)
         
-        if blend != :viscosity && blend != :hyperviscosity
+        if blend != :viscosity && blend != :nodewiseviscosity # the only methods which do not need rhs_vol_low are viscosity and nodewise viscosity
             graph_laplacian!(rhs_vol_low, Q_skew_low, low_order_operator, raw=false)
-        elseif blend == :viscosity || blend == :hyperviscosity
-            low_order_operator_diffusive(i, j) = u_element[i] - u_element[j]
-            graph_laplacian!(rhs_vol_low, Q_skew_low, low_order_operator_diffusive, raw=false)
-
-            if blend == :hyperviscosity
-                graph_laplacian!(rhs_vol_low, Q_skew_low, low_order_operator, raw=false) # to fix an issue with old code :(
-                graph_laplacian!(rhs_vol_hyper, Q_skew_hyper, low_order_operator_diffusive, raw=false)
-
-                safe_rhs_vol_hyper = deepcopy(rhs_vol_hyper)
-
-                low_order_2nd_derivative_diffusive(i, j) = safe_rhs_vol_hyper[i] - safe_rhs_vol_hyper[j]
-                fill!(rhs_vol_hyper, zero(eltype(rhs_vol_hyper)))
-                graph_laplacian!(rhs_vol_hyper, Q_skew_hyper, low_order_2nd_derivative_diffusive, raw=false)
-            end
         end
 
-        # for i in eachindex(u_element), j in eachindex(u_element)            
-        #     if i > j
-        #         fij = volume_flux(u_element[i], u_element[j], 1, equations)
-
-        #         FH_ij = Q_skew[i, j] * fij
-        #         rhs_vol_high[i] +=  FH_ij
-        #         rhs_vol_high[j] += -FH_ij
-                
-        #         # True low order stuffs
-        #         if blend != :viscosity
-        #             FL_ij = zero(eltype(rhs_vol_low))
-        #             if abs(Q_skew_low[i, j]) > 1e-12
-        #                 nij = Q_skew_low[i, j] / abs(Q_skew_low[i, j])
-        #                 fij = surface_flux(u_element[i], u_element[j], SVector{1}(nij), equations)
-        #                 FL_ij = abs(Q_skew_low[i, j]) * fij
-        #                 rhs_vol_low[i] += FL_ij
-        #                 rhs_vol_low[j] -= FL_ij    
-        #             end
-        #         end
-
-        #         # Fake low order stuffs
-        #         if blend == :viscosity || blend == :hyperviscosity
-        #             FL_ij = zero(eltype(rhs_vol_low))
-        #             if abs(Q_skew_low[i, j]) > 1e-12
-        #                 fij = u_element[i] - u_element[j]
-        #                 FL_ij = abs(Q_skew_low[i, j]) * fij
-        #                 rhs_vol_low[i] += FL_ij
-        #                 rhs_vol_low[j] -= FL_ij    
-        #             end
-        #         end
-        #         if blend == :hyperviscosity
-        #             FL_ij = zero(eltype(rhs_vol_low))
-        #             if abs(Q_skew_hyper[i, j]) > 1e-12
-        #                 fij = u_element[i] - u_element[j]
-        #                 FL_ij = abs(Q_skew_hyper[i, j]) * fij
-        #                 rhs_vol_hyper[i] += FL_ij
-        #                 rhs_vol_hyper[j] -= FL_ij
-        #             end
-        #         end
-        #     end
-        # end
+        # The only methods which need a viscous term are the viscosity methods
+        if blend == :viscosity || blend == :hyperviscosity || blend == :nodewiseviscosity
+            low_order_operator_diffusive(i, j) = u_element[i] - u_element[j]
+            graph_laplacian!(rhs_vol_visc, Q_skew_low, low_order_operator_diffusive, raw=false)
+        end
         
         # optimization target
         b = sum(cache.B * psi.(u_element, equations)) + sum(dot.(v, rhs_vol_low))
@@ -147,7 +98,7 @@ function rhs!(du, u, cache, t)
         end
 
         if blend == :viscosity
-            l = sum(dot.(v, rhs_vol_low))
+            l = sum(dot.(v, rhs_vol_visc))
             dΨ = sum(cache.B * psi.(u_element, equations))
             Ec = sum(dot.(v, rhs_vol_high))
             λ = 0
@@ -156,7 +107,9 @@ function rhs!(du, u, cache, t)
                 λ = 2(dΨ + Ec) / l
             end
 
-            r = (rhs_vol_high - λ / 2 * rhs_vol_low)
+            r = (rhs_vol_high - λ / 2 * rhs_vol_visc)
+
+            viscosities[e] = λ / 2
 
             # if !(-sum(dot.(v, r)) <= dΨ + 300 * eps())
             #     println("VIOLATION: ", -sum(dot.(v, r)) - dΨ)
@@ -164,34 +117,40 @@ function rhs!(du, u, cache, t)
 
             view(du, :, e) .+= rd.M \ r
         elseif blend == :hyperviscosity
-            w = 1
-            l = sum(dot.(v, rhs_vol_low))
-            l_hyper = sum(dot.(v, rhs_vol_hyper))
+            w0 = 1
+            w1 = 1
+            l = sum(dot.(v, rhs_vol_visc))
+            l_yimin = sum(dot.(v, rhs_vol_low))
             dΨ = sum(cache.B * psi.(u_element, equations))
             Ec = sum(dot.(v, rhs_vol_high))
             λ = 0
             b = dΨ + Ec
 
-            a = [l, w * l_hyper]
+            a = [w0 * l, w1 * l_yimin]
 
-            # @assert l > -1000 * eps()
-            # @assert l_hyper > -100000 * eps()
-
-            # if !(l_hyper > -100 * eps()) && !isnan(l_hyper)
-            #     println(l_hyper)
-            # end
-
-            # Need aTθ = b
-
-            θ = [0, 0]
+            θ = [0, 0, 0]
 
             if norm(a) > 100 * eps() && (-Ec > dΨ + 100 * eps())
                 θ = b * a / a'a
             end
 
-            # println(θ)
+            r = (rhs_vol_high - w0 * θ[1] * rhs_vol_visc - w1 * θ[2] * rhs_vol_low)
 
-            r = (rhs_vol_high - θ[1] * rhs_vol_low - w * θ[2] * rhs_vol_hyper)
+            view(du, :, e) .+= rd.M \ r
+        elseif blend == :nodewiseviscosity
+            a = vec(v' * Δ * Diagonal(R * rhs_vol_visc))
+            ac = clamp.(a, 0, Inf)
+
+            dΨ = sum(cache.B * psi.(u_element, equations))
+            Ec = sum(dot.(v, rhs_vol_high))
+
+            λ = 0 * a
+            if a'ac > 100 * eps() && (-Ec > dΨ + 100 * eps())
+                b = dΨ + Ec
+                λ = b * ac / (a'ac)
+            end
+
+            r = rhs_vol_high - Δ * (Diagonal(λ) * R * rhs_vol_visc)
 
             view(du, :, e) .+= rd.M \ r
         elseif blend == :elementwise
@@ -201,6 +160,18 @@ function rhs!(du, u, cache, t)
             θ = max(0.0, min(1.0, θ))
             view(du, :, e) .+= rd.M \ (θ * rhs_vol_high + (1 - θ) * rhs_vol_low)
         elseif blend == :subcell
+            # Here we change the entropy variables and psi
+            # v .= u_element
+            
+            # println(flux.(u_element, 1, equations)' * rd.M * rd.Dr * u_element)
+            # dPsi = sum(flux.(u_element, 1, equations)' * rd.M * rd.Dr * u_element)
+            # b = dPsi + sum(dot.(v, rhs_vol_low))
+
+
+            # Here is the end of that
+
+
+
             a = v' * Δ * Diagonal(R * (rhs_vol_low - rhs_vol_high))
 
             # Call the Knapsack Solver
@@ -208,7 +179,7 @@ function rhs!(du, u, cache, t)
             θ = cache.knapsack_solver(a, b)
             
             if nodewise_shock_capturing > 0
-                @. a *= nodewise_shock_capturing * (θ - 1)^2 + 1
+                @. a *= N * tan(pi/2 * nodewise_shock_capturing)^2 * (1 - θ)^2 + 1
 
                 θ = cache.knapsack_solver(a, b)
             end
@@ -222,7 +193,7 @@ function rhs!(du, u, cache, t)
             θ = cache.knapsack_solver(a, b)
 
             if nodewise_shock_capturing > 0
-                @. a *= nodewise_shock_capturing * (θ - 1)^2 + 1
+                @. a *= N * tan(pi/2 * nodewise_shock_capturing)^2 * (1 - θ)^2 + 1
 
                 θ = cache.knapsack_solver(a, b)
             end
@@ -236,9 +207,19 @@ function rhs!(du, u, cache, t)
             view(du, :, e) .+= rd.M \ rhs_vol_high
         end
     end
+
+    if blend == :viscosity
+        # Add the surface term back
+        interface_flux = ((uf - uP) .* md.nxJ) * Diagonal(viscosities)
+        du .-= rd.LIFT * interface_flux
+    end
     
     # invert Jacobian and mass matrix
     du ./= -md.J
+
+    # if any(isnan.(sum.(du)))
+    #     println("NAN DETECTED")
+    # end
 end
 
 rd = RefElemData(Line(), SBP(), N)

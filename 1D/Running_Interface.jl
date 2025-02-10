@@ -13,6 +13,10 @@ include("../L2_knapsack_weighted_a.jl")
 include("../Non_knapsack.jl")
 include("../Smooth_Knapsack.jl")
 include("initial_conditions.jl")
+include("../run_saver.jl")
+
+dimstring = "1D"
+use_run_saver = false
 
 N = 10
 K = 64
@@ -33,15 +37,15 @@ volume_flux = flux_central
 # volume_flux = flux_lax_friedrichs
 # volume_flux = flux_ranocha
 # volume_flux = flux_ec
-blend = :hyperviscosity
+blend = :subcell
 
 shock_capturing = 0
 nodewise_shock_capturing = 0
 
-abstol = 1e-8
-reltol = 1e-6
+abstol = 1e-6
+reltol = 1e-4
 
-timestepper = Tsit5()
+timestepper = SSPRK43()
 adaptive = true
 dt = 1e-4
-saveat = []
+saveat = 1e-2

@@ -8,6 +8,7 @@ cache = (; rd, md, Qr_skew, Qs_skew,
         knapsack_solver! = knapsack_solver, VDM_inv=inv(rd.VDM), shock_capturing=shock_capturing)
 
 initial_condition = initial_condition_density_wave
+# initial_condition = initial_condition_density_wave_low
 
 u0 = initial_condition.(SVector.(md.x, md.y), 0.0, equations)
 du = similar(u0)
@@ -22,10 +23,14 @@ end
 # @show sum(dot.(cons2entropy.(u0, equations), rd.M * (du .* md.J)))
 ode = ODEProblem(rhs!, u0, tspan, cache)
 
-sol = solve(ode, timestepper, 
+sol = load_save_if_exists()
+if sol == -1
+    sol = solve(ode, timestepper, 
             abstol=abstol, reltol=reltol,
             saveat=saveat,
             callback=AliveCallback(alive_interval=10), adaptive=adaptive, dt=dt)
+    save_run()
+end
 
 rq, wq = gauss_quad(0, 0, N+2)
 sq = copy(rq)

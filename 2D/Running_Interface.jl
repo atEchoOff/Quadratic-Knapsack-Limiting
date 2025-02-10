@@ -10,30 +10,37 @@ include("../L2_knapsack.jl")
 include("../L2_knapsack_weighted_a.jl")
 include("../Non_knapsack.jl")
 include("initial_conditions.jl")
+include("../run_saver.jl")
 
-N = 3
-K = 64
+dimstring = "2D"
+use_run_saver = false
 
-if nameof(typeof(knapsack_solver)) == :ContinuousKnapsackSolver
-    knapsack_solver = ContinuousKnapsackSolver((N + 1) * (N + 2))
-end
-# knapsack_solver = QuadraticKnapsackSolver{Float64}()
+N = 4
+K = 100
+
+total_error_estimates = []
+
+# if nameof(typeof(knapsack_solver)) == :ContinuousKnapsackSolver
+#     knapsack_solver = ContinuousKnapsackSolver((N + 1) * (N + 2))
+# end
+knapsack_solver = QuadraticKnapsackSolver{Float64}()
 # knapsack_solver = NonKnapsackSolver{Float64}()
 # knapsack_solver = QuadraticKnapsackSolverA{Float64}()
 # knapsack_solver = ContinuousKnapsackSolver((N + 1) * (N + 2))
 
 # volume_flux = flux_ranocha
-# volume_flux = flux_central
+volume_flux = flux_central
 # volume_flux = flux_shima_etal # useful for non ec solvers, for KHI
 
 blend = :subcell
 
-shock_capturing = false
+shock_capturing = 0
+nodewise_shock_capturing = 0
 
 abstol = 1e-6
 reltol = 1e-4
 
-timestepper = Tsit5()
-adaptive = false
+timestepper = SSPRK43()
+adaptive = true
 dt = 1e-4
-saveat = .01
+saveat = 1

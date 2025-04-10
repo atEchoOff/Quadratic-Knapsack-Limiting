@@ -29,8 +29,7 @@ cache = (;
            rd, md, 
            B = Diagonal([-1; zeros(rd.N-1); 1]),
            high_order_operators=(; Q_skew = rd.M * rd.Dr - (rd.M * rd.Dr)'), 
-           low_order_operators=(; Q_skew_low = Qr-Qr'), 
-           hyper_operator=(; Q_skew_hyper = Qr-Qr'),
+           low_order_operators=(; Q_skew_low = Qr-Qr'),
            fv_operators = (; Δ, R),
            bc = [u0[1, 1] u0[end, end]],
            VDM_inv = inv(rd.VDM),
@@ -55,5 +54,6 @@ u_plot = rd.Vp * getindex.(u, 1)
 plot(rd.Vp * md.x, u_plot, leg=false)
 
 # @gif for u in sol.u
-#     plot(x, rd.Vp * getindex.(u, 1), leg=false, ylims=(0, 1))
+#     plot(vec(md.x), vec(getindex.(u, 1)), leg=false, ylims=(0, 1), lw=2)
+#     niceplot!()
 # end

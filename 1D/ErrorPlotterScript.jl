@@ -14,12 +14,19 @@ include(MODULE)
 times = copy(sol.t)
 
 errors = Float64[]
+
+rq, wq = gauss_quad(0, 0, N+2)
+Vq = vandermonde(Line(), rd.N, rq) / rd.VDM
+wJq = Diagonal(wq) * (Vq * md.J)
+xq = Vq * md.x
+
+
 for i in 1:length(times)
-    push!(errors, sqrt(sum(diag(rd.M) .* map(x -> sum(x.^2), initial_condition.(md.xq, times[i], equations) - sol.u[i]))))
-    # push!(errors, sqrt(sum(diag(rd.M) .* map(x -> sum(x.^2), entropy.(sol.u[i], equations)))))
+    # push!(errors, sqrt(sum(wJq .* map(x -> sum(x.^2), initial_condition.(xq, sol.t[i], equations) - Vq * sol.u[i]))))
+    push!(errors, sum(wJq .* (Vq * entropy.(sol.u[i], equations))))
 end
 
 times = times[2:end]
 errors = errors[2:end]
 
-save(nameof(typeof(knapsack_solver)), errors)
+save(case, errors)

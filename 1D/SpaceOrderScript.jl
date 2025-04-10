@@ -1,8 +1,11 @@
 include("../ObjectTransitioner.jl")
 include("Running_Interface.jl")
 
+using LsqFit
+
 MODULE = "density_wave.jl"
 
+N = 3
 adaptive = false
 dt = 1e-4
 
@@ -13,16 +16,22 @@ println("Running $MODULE, with knapsack_solver = $(nameof(typeof(knapsack_solver
 Li = Float64[]
 Ki = Float64[]
 
-for i in floor.(Int64, 2 .^ ((40:52) * .1))
-    global K
-    K = i
-    push!(Ki, 1 / K)
+i = 8
+while length(Li) == 0 || Li[end] > 1e-6
+    global K, i
+    K = floor(Int, i)
+    println("Testing K = $K")
+    i *= 2^.2
+
+    push!(Ki, 2 / K)
 
     include(MODULE)
 
-    nm = sqrt(sum(diag(rd.M) .* map(x -> sum(x.^2), initial_condition.(md.xq, sol.t[end], equations) - sol.u[end])))
+    nm = L2_error
     println("Obtained norm $nm")
     push!(Li, nm)
 end
 
+
 println(Polynomials.fit(log.(Ki), log.(Li), 1))
+display(Li)

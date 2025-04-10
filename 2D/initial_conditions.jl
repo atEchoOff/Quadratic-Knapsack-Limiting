@@ -30,6 +30,67 @@ function initial_condition_khi(coords, t, ::CompressibleEulerEquations2D)
     return prim2cons(SVector(rho, u, v, p), equations)
 end
 
+function initial_condition_khi_asymmetric(coords, t, equations::CompressibleEulerEquations2D)
+    x, y = coords
+
+    # A = .8
+    A = 3 / 7
+    rho1 = 0.5 * one(A) # recover original with A = 3/7
+    rho2 = rho1 * (1 + A) / (1 - A)
+
+    # B is a discontinuous function with value 1 for -.5 <= x <= .5 and 0 elsewhere
+    slope = 15
+    B = 0.5 * (tanh(slope * y + 7.5) - tanh(slope * y - 7.5))
+
+    rho = rho1 + B * (rho2 - rho1)  # rho ∈ [rho_1, rho_2]
+    v1 = B - 0.5                    # v1  ∈ [-.5, .5]
+    # v2 = 0.1 * sin(2 * pi * x[1]) 
+    v2 = 0.1 * sin(2 * pi * x) * (1 + .01 * sin(pi * x) * sin(pi * y)) # symmetry breaking
+    p = 1.0
+    return prim2cons(SVector(rho, v1, v2, p), equations)
+end
+
+function initial_condition_khi_dissipated(coords, t, equations::CompressibleEulerEquations2D)
+    x, y = coords
+
+    # A = .8
+    A = 3 / 7
+    rho1 = 0.5 * one(A) # recover original with A = 3/7
+    rho2 = rho1 * (1 + A) / (1 - A)
+
+    # B is a discontinuous function with value 1 for -.5 <= x <= .5 and 0 elsewhere
+    slope = 15
+    B = 0.5 * (tanh(slope * y + 7.5) - tanh(slope * y - 7.5))
+
+    rho = rho1 + B * (rho2 - rho1)  # rho ∈ [rho_1, rho_2]
+    v1 = B - 0.5                    # v1  ∈ [-.5, .5]
+    # v2 = 0.1 * sin(2 * pi * x[1]) 
+    v2 = 0.1 * sin(2 * pi * x)
+    p = 1.0
+    return prim2cons(SVector(rho, v1, v2, p), equations)
+end
+
+function initial_condition_sedov_blastwave(coords, t, equations::CompressibleEulerEquations2D)
+    x, y = coords
+    h = 3 / K # mesh size
+    r0 = 4h
+
+    r = sqrt(x^2 + y^2)
+    if r < r0
+        rho = 1
+        v1 = 0
+        v2 = 0
+        p = .4 / (pi * r0^2)
+    else
+        rho = 1
+        v1 = 0
+        v2 = 0
+        p = 1e-5
+    end
+
+    return prim2cons(SVector(rho, v1, v2, p), equations)
+end
+
 function initial_condition_football(coords, t, ::CompressibleEulerEquations2D)
     x, y = coords
 

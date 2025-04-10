@@ -1,18 +1,18 @@
-struct QuadraticKnapsackSolver{Ttol}
+struct QuadraticKnapsackMinimizer{Ttol}
     tol::Ttol
 
-    function QuadraticKnapsackSolver{Ttol}(;tol::Ttol = 100 * eps()) where {Ttol}
+    function QuadraticKnapsackMinimizer{Ttol}(;tol::Ttol = 100 * eps()) where {Ttol}
         return new{Ttol}(tol)
     end
 end
 
-function (s::QuadraticKnapsackSolver)(a, b; upper_bounds=ones(length(a)), w=ones(length(a)))
+function (s::QuadraticKnapsackMinimizer)(a, b; upper_bounds=ones(eltype(a), length(a)), w=ones(eltype(a), length(a)))
     # Take a, b optimization parameters
     # Take upper_bounds (default is ones)
     # Take w weights (default is ones)
     # Return (not by parameter) optimal θ
     x = ones(eltype(a), length(a))
-    return quadratic_knapsack_solver!(x, a, b, upper_bounds, w; s.tol)
+    return quadratic_knapsack_minimizer!(x, a, b, upper_bounds, w; s.tol)
 end
 
 function smooth_clamp(x, b)
@@ -30,37 +30,29 @@ function smooth_clamp(x, b)
     end
 end
 
-function quadratic_knapsack_solver!(x, a, b, upper_bounds, w; tol = 100 * eps(), maxit=200)
+function quadratic_knapsack_minimizer!(x, a, b, upper_bounds, w; tol = 100 * eps(), maxit=200)
     # maxit is a huge upper bound here. The iteration will take at most N + 1 iterations, but usually takes around 1 - 3, and rarely 4.
     # Note also, if maxit is reached, it likely implies that b is negative, so the problem needs cleaning
 
-    ### Optional infeasibility check, uncomment to see if issues are caused by infeasibility
-    # I = upper_bounds .* (a .< tol)
+    # Here we minimize theta subject to a'theta <= b
 
-    # if (a'I > b + tol) || (b < 0)
-    #     # This is problem infeasibility
-    #     # Here, we will just return the best we can do
-    #     println("infeasibility (this should never happen in a well-posed problem)")
-    #     return I
-    # end
-
-    # Problem infeasibility... this is bad
-    # Just return low order solution... best we can do
-    if b <= 0.0
-        x .= zero(eltype(a))
-        # println("Infeasibility Detected")
-        return x
-    end
-
-    # original_b = b # for sanity check
-    b = a' * upper_bounds - b
-
-    if b <= 0.0
+    if b >= 0.0
         # x = 0 is the optimal solution for the minimization
         # meaning the optimal solution for the maximization problem is upper_bounds
-        copy!(x, upper_bounds)
+        x .= zero(eltype(a))
         return x
     end
+
+    # We now want to solve for equality. We want a'theta == b
+    # For the algorithm to work correctly, we need b > 0. Therefore, we negate a and b
+
+    # Negate both a and b
+    a = -a
+    b = -b
+
+    # Now, we want a'theta = b > 0. 
+
+    # Suppose we find theta. Then, (-a)'theta = (-b), or a'theta = b. Then we are done! Proceed as normal
 
     # Start the Newton iteration
     lambdak = zero(eltype(a))
@@ -93,12 +85,14 @@ function quadratic_knapsack_solver!(x, a, b, upper_bounds, w; tol = 100 * eps(),
 
     # x .= sgn_a .* x
 
-    x .= upper_bounds .- x
-
     ### These are all my sanity checks. Non well-posed problems may break them, so if issues are found, uncomment these and the sanity check comments above for checking.
-    # if itercount > 3
-    #     println("The itercount was $itercount")
-    # end
+    if itercount > 3
+        println("The itercount was $itercount")
+        @show a
+        @show b
+        @show upper_bounds
+        println(a'x - b)
+    end
 
     # @assert all(x .== 1.0)
 

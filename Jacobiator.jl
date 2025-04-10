@@ -1,4 +1,5 @@
 using LinearAlgebra
+using ForwardDiff
 
 function roll_up(u, m, n, d)
     return reshape(reinterpret(SVector{d, Float64}, u), m, n)
@@ -27,4 +28,19 @@ function get_jacobian_rhs(du, u; epsilon=1e-6)
     end
 
     return A
+end
+
+function get_jesse_jacobian_rhs(du, u)
+    rhs_fd = let cache=cache
+        function rhs_fd(u_in::AbstractArray{T}) where {T}
+            u = reinterpret(reshape, SVector{nvariables(equations), T}, 
+                            reshape(u_in, :, size(md.x)...))
+            du = similar(u)
+            rhs!(du, u, cache, 0.0)
+            return reinterpret(reshape, T, du)
+        end
+    end
+
+    u_in = reinterpret(reshape, Float64, u)
+    return ForwardDiff.jacobian(rhs_fd, u_in)
 end

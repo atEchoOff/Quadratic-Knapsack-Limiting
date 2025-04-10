@@ -2,16 +2,23 @@ include("common.jl")
 tspan = (0.0, 4.0)
 equations = CompressibleEulerEquations2D(1.4)
 
-cache = (; rd, md, Qr_skew, Qs_skew, 
-           Qr_sparse_skew, Qs_sparse_skew, Δr, Rr, 
-           equations, volume_flux, surface_flux = flux_lax_friedrichs,
-        knapsack_solver! = knapsack_solver, VDM_inv=inv(rd.VDM), shock_capturing=shock_capturing)
-
 initial_condition = initial_condition_density_wave
 # initial_condition = initial_condition_density_wave_low
 
+
 u0 = initial_condition.(SVector.(md.x, md.y), 0.0, equations)
 du = similar(u0)
+
+rhs_vol_high_cache = similar(du)
+rhs_vol_low_cache = similar(du)
+rhs_vol_visc_cache = similar(du)
+v_cache = similar(du)
+
+cache = (; rd, md, Qr_skew, Qs_skew, 
+           Qr_sparse_skew, Qs_sparse_skew, Δr, Rr, 
+           equations, volume_flux, surface_flux = flux_lax_friedrichs,
+        knapsack_solver! = knapsack_solver, VDM_inv=inv(rd.VDM), shock_capturing=shock_capturing,
+        rhs_vol_high_cache, rhs_vol_low_cache, rhs_vol_visc_cache, v_cache)
 
 function psi(u, normal, equations::CompressibleEulerEquations2D)
     rho, rho_v1, rho_v2, _ = u

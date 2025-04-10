@@ -2,45 +2,57 @@ include("../ObjectTransitioner.jl")
 using Plots
 using LaTeXStrings
 using RollingFunctions
+using Measures
 
 println(@__DIR__)
 
-N_to_plot = 3
-K_to_plot = 64
-TS_to_plot = "Tsit5"
-
-L1 = find("N$(N_to_plot)K$(K_to_plot)TS$(TS_to_plot)CL1")
-L2 = find("N$(N_to_plot)K$(K_to_plot)TS$(TS_to_plot)CL2")
-EC = find("N$(N_to_plot)K$(K_to_plot)TS$(TS_to_plot)CEC")
-DG = find("N$(N_to_plot)K$(K_to_plot)TS$(TS_to_plot)CDG")
+L1 = find("L1")
+L2 = find("L2")
+EC = find("EC")
+DG = find("DG")
 # times = find("times")
-dt = 1e-5
-T = .2
+dt = 1e-2
+T = 4
 times = dt:dt:T
 
-times = rollmean(times, 1024)
-L1 = rollmean(L1, 1024)
-L2 = rollmean(L2, 1024)
-EC = rollmean(EC, 1024)
-DG = rollmean(DG, 1024)
+# times = rollmean(times, 1024)
+# L1 = rollmean(L1, 1024)
+# L2 = rollmean(L2, 1024)
+# EC = rollmean(EC, 1024)
+# DG = rollmean(DG, 1024)
 
 # times = times[2:end]
 
 # times should already be set
-# plot()
-plot(times, L1, lw=2, c=:red, label="Linear Knapsack", yaxis=:log)
-plot!(times, L2, lw=2, c=:blue, label="Quadratic Knapsack", yaxis=:log)
-plot!(times, EC, lw=2, c=:orange, label="Entropy Conservative", yaxis=:log)
+plot()
+plot(times, L1, lw=2, c=:red, label="LK", yaxis=:log)
+plot!(times, L2, lw=2, c=:blue, label="QK", yaxis=:log)
+plot!(times, EC, lw=2, c=:orange, label="EC", yaxis=:log)
 plot!(times, DG, lw=2, c=:green, label="DG", yaxis=:log)
+# plot(times, L1, lw=2, c=:red, label="LK")
+# plot!(times, L2, lw=2, c=:blue, label="QK")
+# plot!(times, EC, lw=2, c=:orange, label="EC")
+# plot!(times, DG, lw=2, c=:green, label="DG")
 xlabel!(L"$t$")
-ylabel!("Total Entropy")
-plot!(legend=:topleft)
-plot!(legendfontsize=10)
-plot!(xtickfontsize=10)
-plot!(ytickfontsize=10)
-plot!(labelfontsize=12)
+ylabel!(L"$L^2$ Error")
+plot!(legend=:right)
+plot!(legendfontsize=12)
+plot!(xtickfontsize=12)
+plot!(ytickfontsize=12)
+plot!(labelfontsize=14)
+# plot!(rightmargin = 4mm)
 
-# plot!(ylim=(10^-.65, 10^-.55))
+L1 = L1[times .>= .1]
+L2 = L2[times .>= .1]
+EC = EC[times .>= .1]
+DG = DG[times .>= .1]
+
+
+
+plot!(ylim=(minimum(union(L1, L2, EC, DG)), maximum(union(L1, L2, EC, DG))))
+
+savefig("density_wave_plots.png")
+plot!()
 # plot!(xlim=(.15, .2))
 
 # savefig("temp.png")

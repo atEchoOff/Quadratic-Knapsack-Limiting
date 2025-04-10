@@ -1,5 +1,5 @@
 include("common.jl")
-tspan = (0., 10.)
+tspan = (0., 1.)
 psi(u, ::CompressibleEulerEquations1D) = u[2]
 
 md = make_periodic(md)
@@ -7,7 +7,12 @@ md = make_periodic(md)
 equations = CompressibleEulerEquations1D(1.4)
 
 # initial_condition = initial_condition_density_wave
-initial_condition = initial_condition_density_wave_low
+initial_condition = initial_condition_density_wave_fast
+# initial_condition = initial_condition_density_wave_jesse
+# initial_condition = initial_condition_density_wave_linear_stability
+# initial_condition = initial_condition_density_wave_slow
+# initial_condition = initial_condition_density_wave_low
+# initial_condition = initial_condition_constant_one
 
 u0 = rd.Pq * initial_condition.(md.xq, 0.0, equations)
 u = copy(u0)
@@ -16,8 +21,7 @@ cache = (;
            rd, md, 
            B = Diagonal([-1; zeros(rd.N-1); 1]),
            high_order_operators=(; Q_skew = rd.M * rd.Dr - (rd.M * rd.Dr)'), 
-           low_order_operators=(; Q_skew_low = Qr-Qr'), 
-           hyper_operator=(; Q_skew_hyper = Qr^3 - Qr'^3),
+           low_order_operators=(; Q_skew_low = Qr-Qr'),
            fv_operators = (; Δ, R), 
            blend = blend,
            knapsack_solver = knapsack_solver,
@@ -54,3 +58,6 @@ println("N = $N, K1D = $(md.num_elements), L1_error = $L1_error, L2_error = $L2_
 
 
 # plot(rd.Vp * md.x, rd.Vp * getindex.(u, 1), leg=false)
+absolute_error = vec(getindex.(u, 1)) - vec(getindex.(initial_condition.(md.x, sol.t[end], equations), 1))
+relative_error = absolute_error ./ (vec(getindex.(initial_condition.(md.x, sol.t[end], equations), 1)) .^2)
+plot(vec(md.x), relative_error, leg=false)

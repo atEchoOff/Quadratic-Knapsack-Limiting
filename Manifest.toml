@@ -2,7 +2,7 @@
 
 julia_version = "1.10.7"
 manifest_format = "2.0"
-project_hash = "e46e9db4c2c5f7b97f13d63b6b9964aebe29f1e7"
+project_hash = "2701558ba6dd622a4e456a88767766ddf5cfdd42"
 
 [[deps.ADTypes]]
 git-tree-sha1 = "016833eb52ba2d6bea9fcb50ca295980e728ee24"
@@ -336,6 +336,12 @@ git-tree-sha1 = "6cbbd4d241d7e6579ab354737f4dd95ca43946e1"
 uuid = "f0e56b4a-5159-44fe-b623-3e5288b988bb"
 version = "2.4.1"
 
+[[deps.Conda]]
+deps = ["Downloads", "JSON", "VersionParsing"]
+git-tree-sha1 = "b19db3927f0db4151cb86d073689f2428e524576"
+uuid = "8f4d0f93-b110-5947-807f-2305c1781a2d"
+version = "1.10.2"
+
 [[deps.ConstructionBase]]
 deps = ["LinearAlgebra"]
 git-tree-sha1 = "260fd2400ed2dab602a7c15cf10c1933c59930a2"
@@ -360,6 +366,11 @@ deps = ["Markdown"]
 git-tree-sha1 = "fcbb72b032692610bfbdb15018ac16a36cf2e406"
 uuid = "adafc99b-e345-5852-983c-f28acb93d879"
 version = "0.3.1"
+
+[[deps.Crayons]]
+git-tree-sha1 = "249fe38abf76d48563e2f4556bebd215aa317e15"
+uuid = "a8cc5b0e-0ffa-5ad4-8c14-923d3ee1735f"
+version = "4.1.1"
 
 [[deps.DataAPI]]
 git-tree-sha1 = "abe83f3a2f1b857aac70ef8b269080af17764bbe"
@@ -722,6 +733,12 @@ deps = ["Artifacts", "JLLWrappers", "Libdl", "Libglvnd_jll", "Xorg_libXcursor_jl
 git-tree-sha1 = "ff38ba61beff76b8f4acad8ab0c97ef73bb670cb"
 uuid = "0656b61e-2033-5cc2-a64a-77c0f6c09b89"
 version = "3.3.9+0"
+
+[[deps.GMT]]
+deps = ["Conda", "Dates", "Pkg", "PrettyTables", "Printf", "SnoopPrecompile", "Statistics", "Tables"]
+git-tree-sha1 = "5968385e86d9c119db96d05e41df420c245f73da"
+uuid = "5752ebe1-31b9-557e-87aa-f909b540aa54"
+version = "0.44.8"
 
 [[deps.GPUArraysCore]]
 deps = ["Adapt"]
@@ -1799,6 +1816,12 @@ git-tree-sha1 = "9306f6085165d270f7e3db02af26a400d580f5c6"
 uuid = "21216c6a-2e73-6563-6e65-726566657250"
 version = "1.4.3"
 
+[[deps.PrettyTables]]
+deps = ["Crayons", "LaTeXStrings", "Markdown", "PrecompileTools", "Printf", "Reexport", "StringManipulation", "Tables"]
+git-tree-sha1 = "1101cd475833706e4d0e7b122218257178f48f34"
+uuid = "08abe8d2-0d0c-5749-adfa-8a2ac140af0d"
+version = "2.4.0"
+
 [[deps.Primes]]
 deps = ["IntegerMathUtils"]
 git-tree-sha1 = "cb420f77dc474d23ee47ca8d14c90810cafe69e7"
@@ -2086,6 +2109,12 @@ git-tree-sha1 = "58e6353e72cde29b90a69527e56df1b5c3d8c437"
 uuid = "ce78b400-467f-4804-87d8-8f486da07d0a"
 version = "1.1.0"
 
+[[deps.SnoopPrecompile]]
+deps = ["Preferences"]
+git-tree-sha1 = "e760a70afdcd461cf01a575947738d359234665c"
+uuid = "66db9d55-30c0-4569-8b51-7e840670fc0c"
+version = "1.0.3"
+
 [[deps.Sobol]]
 deps = ["DelimitedFiles", "Random"]
 git-tree-sha1 = "5a74ac22a9daef23705f010f72c81d6925b19df8"
@@ -2240,6 +2269,12 @@ git-tree-sha1 = "25349bf8f63aa36acbff5e3550a86e9f5b0ef682"
 uuid = "7792a7ef-975c-4747-a70f-980b88e8d1da"
 version = "0.5.6"
 
+[[deps.StringManipulation]]
+deps = ["PrecompileTools"]
+git-tree-sha1 = "725421ae8e530ec29bcbdddbe91ff8053421d023"
+uuid = "892a3eda-7b42-436c-8928-eab12a02cf0e"
+version = "0.4.1"
+
 [[deps.StructArrays]]
 deps = ["ConstructionBase", "DataAPI", "Tables"]
 git-tree-sha1 = "f4dc295e983502292c4c3f951dbb4e985e35b3be"
@@ -2264,20 +2299,22 @@ version = "7.2.1+1"
 
 [[deps.SummationByPartsOperators]]
 deps = ["ArgCheck", "AutoHashEquals", "FFTW", "InteractiveUtils", "LinearAlgebra", "LoopVectorization", "MuladdMacro", "PolynomialBases", "PrecompileTools", "RecursiveArrayTools", "Reexport", "Requires", "SciMLBase", "SimpleUnPack", "SparseArrays", "StaticArrayInterface", "StaticArrays", "Unrolled"]
-git-tree-sha1 = "7daf3888e250d13e0b0d6198f9293ea66ab7f2d4"
+git-tree-sha1 = "e9c8882c820eab4fdc50bcbbe79cb23b96692ca3"
 uuid = "9f78cca6-572e-554e-b819-917d2f1cf240"
-version = "0.5.61"
+version = "0.5.75"
 
     [deps.SummationByPartsOperators.extensions]
     SummationByPartsOperatorsBandedMatricesExt = "BandedMatrices"
     SummationByPartsOperatorsDiffEqCallbacksExt = "DiffEqCallbacks"
     SummationByPartsOperatorsForwardDiffExt = "ForwardDiff"
+    SummationByPartsOperatorsOptimForwardDiffExt = ["Optim", "ForwardDiff"]
     SummationByPartsOperatorsStructArraysExt = "StructArrays"
 
     [deps.SummationByPartsOperators.weakdeps]
     BandedMatrices = "aae01518-5342-5314-be14-df237901396f"
     DiffEqCallbacks = "459566f4-90b8-5000-8ac3-15dfb0a30def"
     ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
+    Optim = "429524aa-4258-5aef-a3af-852621145aeb"
     StructArrays = "09ab397b-f2b6-538f-b94a-2f83cf4a842a"
 
 [[deps.SymbolicIndexingInterface]]
@@ -2517,6 +2554,11 @@ deps = ["LoopVectorization", "PrecompileTools", "Static"]
 git-tree-sha1 = "774e4224fb1784862b7617ca4db71b44af0e8761"
 uuid = "3b853605-1c98-4422-8364-4bd93ee0529e"
 version = "0.5.7"
+
+[[deps.VersionParsing]]
+git-tree-sha1 = "58d6e80b4ee071f5efd07fda82cb9fbe17200868"
+uuid = "81def892-9a0e-5fdd-b105-ffc91e053289"
+version = "1.3.0"
 
 [[deps.VertexSafeGraphs]]
 deps = ["Graphs"]

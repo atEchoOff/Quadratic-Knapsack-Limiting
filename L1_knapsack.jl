@@ -17,7 +17,7 @@ function (s::ContinuousKnapsackSolver)(x, a, b)
     return knapsack_solver!(x, s.indices_sorted[Threads.threadid()], a, b; s.tol)
 end
 
-function (s::ContinuousKnapsackSolver)(a, b; upper_bounds=ones(length(a)))
+function (s::ContinuousKnapsackSolver)(a, b; upper_bounds=ones(eltype(a), length(a)))
     x = copy(upper_bounds)
     return knapsack_solver!(x, s.indices_sorted[Threads.threadid()], a, b; s.tol)
 end
@@ -44,7 +44,7 @@ function knapsack_solver!(x, indices_sorted, a, b; tol = 100 * eps())
             s = s - a[i] * x[i] 
             if s > b + tol || a[i] < tol
                 # if s without x[i] is still > b, remove the contribution by setting x[i] = 0            
-                x[i] = 0.0
+                x[i] = zero(eltype(a))
             else
                 # if s without x[i] ≤ b, add the max that we can back in
                 x[i] = min(upper_bounds[i], (b - s) / a[i]) # want to find x[i] such that s + a[i]* x[i] = b

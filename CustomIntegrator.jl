@@ -5,3 +5,11 @@ function Base.setproperty!(obj::OrdinaryDiffEq.ODEIntegrator, name::Symbol, valu
     end
     Core.setfield!(obj, name, value)
 end
+
+function Base.getproperty(obj::OrdinaryDiffEq.ODEIntegrator, name::Symbol)
+    if preserve_positivity >= 0 && name === :dt
+        global current_timestep = getfield(obj, name)
+    end
+
+    return getfield(obj, name)
+end

@@ -35,25 +35,25 @@ if sol == -1
     save_run()
 end
 # @gif for u in sol.u
-#     plot(rd.Vp * md.x, rd.Vp * getindex.(u, 1), leg=false, ylims=(0, 2))
+#     plot(rd.Vp * md.x, rd.Vp * getindex.(u, 1), leg=false, ylims=(0, 1.5))
 # end
-u = sol.u[end]
-# plot!(rd.Vp * md.x, getindex.(initial_condition.(rd.Vp * md.x, tspan[2], equations), 1), leg=false)
+# u = sol.u[end]
+# # plot!(rd.Vp * md.x, getindex.(initial_condition.(rd.Vp * md.x, tspan[2], equations), 1), leg=false)
 
-rq, wq = gauss_quad(0, 0, N+2)
-Vq = vandermonde(Line(), rd.N, rq) / rd.VDM
-wJq = Diagonal(wq) * (Vq * md.J)
-xq = Vq * md.x
+# rq, wq = gauss_quad(0, 0, N+2)
+# Vq = vandermonde(Line(), rd.N, rq) / rd.VDM
+# wJq = Diagonal(wq) * (Vq * md.J)
+# xq = Vq * md.x
 
-function true_sol(x)
-    # return SVector{1}(.25 * x + .5)
-    return SVector{1}(.2 * x)
-end
+# function true_sol(x)
+#     # return SVector{1}(.25 * x + .5)
+#     return SVector{1}(.2 * x)
+# end
 
-L1_error = sum(wJq .* map(x -> sum(abs.(x)), true_sol.(xq) - Vq * sol.u[end]))
-L2_error = sqrt(sum(wJq .* map(x -> sum(x.^2), true_sol.(xq) - Vq * sol.u[end])))
+# L1_error = sum(wJq .* map(x -> sum(abs.(x)), true_sol.(xq) - Vq * sol.u[end]))
+# L2_error = sqrt(sum(wJq .* map(x -> sum(x.^2), true_sol.(xq) - Vq * sol.u[end])))
 
-println("N = $N, K1D = $(md.num_elements), L1_error = $L1_error, L2_error = $L2_error")
+# println("N = $N, K1D = $(md.num_elements), L1_error = $L1_error, L2_error = $L2_error")
 
 
 # plot(rd.Vp * md.x, rd.Vp * getindex.(u, 1), leg=false)

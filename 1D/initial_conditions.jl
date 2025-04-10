@@ -4,12 +4,28 @@ using SodShockTube
 solve = OrdinaryDiffEq.solve
 
 function initial_condition_linear_advection(x, t, equations::LinearScalarAdvectionEquation1D)
-    return x
+    return exp(-10 * x^2)
 end
 
 function initial_condition_burgers(x, t, equations::InviscidBurgersEquation1D)
     u = exp(-10 * x^2)
     return SVector(u)
+end
+
+function initial_condition_density_wave_jesse(x, t, equations::CompressibleEulerEquations1D)
+    u = .1
+    rho = .98 * sin(2pi * (x - .1t)) + 1
+    p = 10.
+
+    return SVector(prim2cons(SVector(rho, u, p), equations))
+end
+
+function initial_condition_density_wave_slow(x, t, equations::CompressibleEulerEquations1D)
+    u = .1
+    rho = .98 * sin(pi * (x - .1t)) + 1
+    p = 1.
+
+    return SVector(prim2cons(SVector(rho, u, p), equations))
 end
 
 function initial_condition_density_wave(x, t, equations::CompressibleEulerEquations1D)
@@ -20,9 +36,25 @@ function initial_condition_density_wave(x, t, equations::CompressibleEulerEquati
     return SVector(prim2cons(SVector(rho, u, p), equations))
 end
 
+function initial_condition_density_wave_fast(x, t, equations::CompressibleEulerEquations1D)
+    u = 1.7
+    rho = .5 * sin(pi * (x - 1.7t)) + 1
+    p = 1.
+
+    return SVector(prim2cons(SVector(rho, u, p), equations))
+end
+
 function initial_condition_density_wave_low(x, t, equations::CompressibleEulerEquations1D)
     u = 1.
     rho = .98 * sin(2 * pi * (x - t)) + 1
+    p = 1.
+
+    return SVector(prim2cons(SVector(rho, u, p), equations))
+end
+
+function initial_condition_constant_one(x, t, equations::CompressibleEulerEquations1D)
+    u = .1
+    rho = 1.
     p = 1.
 
     return SVector(prim2cons(SVector(rho, u, p), equations))
@@ -55,6 +87,19 @@ function initial_condition_sod_shock(x, t, equations::CompressibleEulerEquations
         end
     end
 
+    return prim2cons(SVector(rho, v1, p), equations)
+end
+
+function initial_condition_leblanc_shocktube(x, t, equations::CompressibleEulerEquations1D)
+    if x[1] <= 0
+        rho = 2.
+        v1 = 0.
+        p = 1e9
+    else
+        rho = .001
+        v1 = 0.
+        p = 1.
+    end
     return prim2cons(SVector(rho, v1, p), equations)
 end
 

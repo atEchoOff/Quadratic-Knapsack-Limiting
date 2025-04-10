@@ -1,3 +1,13 @@
+import Trixi: flux_hllc
+# use the 2D implementation since the 1D version doesn't account for n::Integer < 0
+function flux_hllc(u_ll, u_rr, n::SVector{1}, equations::CompressibleEulerEquations1D)
+    f = flux_hllc(SVector(u_ll[1], u_ll[2], 0, u_ll[3]), 
+                  SVector(u_rr[1], u_rr[2], 0, u_rr[3]), 
+                  SVector(n[1], 0.0), 
+                  CompressibleEulerEquations2D(equations.gamma))    
+    return SVector(f[1], f[2], f[4])
+end
+
 function graph_laplacian!(vec, matr, operator; raw=false)
     for i in eachindex(vec), j in eachindex(vec)
         if i > j
@@ -21,7 +31,6 @@ function rhs!(du, u, cache, t)
     (; physics, rd, md) = cache
     (; Q_skew) = cache.high_order_operators
     (; Q_skew_low) = cache.low_order_operators
-    (; Q_skew_hyper) = cache.hyper_operator
     (; Δ, R) = cache.fv_operators
     (; equations, volume_flux, surface_flux) = physics
     (; bc, VDM_inv, shock_capturing, nodewise_shock_capturing) = cache
@@ -32,8 +41,6 @@ function rhs!(du, u, cache, t)
         u[1, 1] = bc[:, 1]
         u[end, end] = bc[:, 2]
     end
-
-    viscosities = Vector{Float64}(undef, K)
 
     # interface flux
     uf = rd.Vf * u
@@ -77,6 +84,61 @@ function rhs!(du, u, cache, t)
         # optimization target
         b = sum(cache.B * psi.(u_element, equations)) + sum(dot.(v, rhs_vol_low))
 
+        function preserve_positivity_forward()
+            maximum_theta = 1
+
+            if preserve_positivity >= 0
+                # top part first
+                top_part = (1 - preserve_positivity) * (rd.M * (md.J[1, 1] / current_timestep * u_element - view(du, :, e)) - rhs_vol_low)
+                # Now bottom part
+                bottom_part = rhs_vol_high - rhs_vol_low
+
+                # FIXME for compressible euler, we satisfy positivity just for 1st and 3rd component...
+                top_part = vcat(getindex.(top_part, 1), getindex.(top_part, 3))
+                bottom_part = vcat(getindex.(bottom_part, 1), getindex.(bottom_part, 3))
+
+                # If bottom part is negative, we dont want to count it in the minimum.
+                top_part = top_part[bottom_part .> 0]
+                bottom_part = 2 * bottom_part[bottom_part .> 0]
+
+                # Now, compute the minimum
+                if length(bottom_part) > 0
+                    maximum_theta = minimum(top_part ./ bottom_part)
+                    maximum_theta = min(1, maximum_theta)
+                end
+            end
+
+            return maximum_theta
+        end
+
+        function preserve_positivity_backward()
+            minimum_theta = 0
+
+            if preserve_positivity >= 0
+                # We need to determine the bound here. 
+                # top part first
+                top_part = rhs_vol_high - preserve_positivity * rhs_vol_low - (1 - preserve_positivity) * rd.M * (md.J[1, 1] / current_timestep * u_element - view(du, :, e))
+                # Now bottom part
+                bottom_part = rhs_vol_high - rhs_vol_low
+
+                # FIXME for compressible euler, we satisfy positivity just for 1st and 3rd component...
+                top_part = vcat(getindex.(top_part, 1), getindex.(top_part, 3))
+                bottom_part = vcat(getindex.(bottom_part, 1), getindex.(bottom_part, 3))
+
+                # If bottom part is negative, we dont want to count it in the minimum.
+                top_part = 2top_part[bottom_part .> 0]
+                bottom_part = bottom_part[bottom_part .> 0]
+
+                # Now, compute the minimum
+                if length(bottom_part) > 0
+                    minimum_theta = maximum(top_part ./ bottom_part)
+                    minimum_theta = clamp(minimum_theta, 0, 1)
+                end
+            end
+
+            return minimum_theta
+        end
+
         ### Shock capturing optimization target
         if shock_capturing > 0
             μ = VDM_inv * getindex.(u_element, 1)
@@ -108,8 +170,6 @@ function rhs!(du, u, cache, t)
             end
 
             r = (rhs_vol_high - λ / 2 * rhs_vol_visc)
-
-            viscosities[e] = λ / 2
 
             # if !(-sum(dot.(v, r)) <= dΨ + 300 * eps())
             #     println("VIOLATION: ", -sum(dot.(v, r)) - dΨ)
@@ -154,36 +214,44 @@ function rhs!(du, u, cache, t)
 
             view(du, :, e) .+= rd.M \ r
         elseif blend == :elementwise
-            # 1. elementwise blending of rhs_vol_high/low
+            maximum_theta = preserve_positivity_forward()
+
             denom = -(sum(dot.(v, rhs_vol_high - rhs_vol_low)) + 100 * eps())
             θ = b / denom
-            θ = max(0.0, min(1.0, θ))
+            θ = max(0.0, min(maximum_theta, θ))
             view(du, :, e) .+= rd.M \ (θ * rhs_vol_high + (1 - θ) * rhs_vol_low)
         elseif blend == :subcell
-            # Here we change the entropy variables and psi
-            # v .= u_element
-            
-            # println(flux.(u_element, 1, equations)' * rd.M * rd.Dr * u_element)
-            # dPsi = sum(flux.(u_element, 1, equations)' * rd.M * rd.Dr * u_element)
-            # b = dPsi + sum(dot.(v, rhs_vol_low))
-
-
-            # Here is the end of that
-
-
-
             a = v' * Δ * Diagonal(R * (rhs_vol_low - rhs_vol_high))
+            
+            maximum_theta = preserve_positivity_forward()
 
             # Call the Knapsack Solver
             a = vec(a)
-            θ = cache.knapsack_solver(a, b)
+            θ = cache.knapsack_solver(a, b, upper_bounds = ones(eltype(a), length(a)) * maximum_theta)
             
             if nodewise_shock_capturing > 0
                 @. a *= N * tan(pi/2 * nodewise_shock_capturing)^2 * (1 - θ)^2 + 1
 
                 θ = cache.knapsack_solver(a, b)
             end
+
             view(du, :, e) .+= rd.M \ (Δ * (Diagonal(θ) * R * rhs_vol_high + Diagonal(1 .- θ) * R * rhs_vol_low))
+        elseif blend == :subcell_reversed
+            a = v' * Δ * Diagonal(R * (rhs_vol_high - rhs_vol_low))
+
+            minimum_theta = preserve_positivity_backward()
+            
+            # Call the Knapsack Solver
+            a = vec(a)
+            b = sum(cache.B * psi.(u_element, equations)) + sum(dot.(v, rhs_vol_high)) - minimum_theta * sum(a)
+            θ = cache.knapsack_solver(a, b, upper_bounds = ones(length(a)) * (1 - minimum_theta))
+            
+            if nodewise_shock_capturing > 0
+                @. θ *= N * tan(pi/2 * nodewise_shock_capturing)^2 * (θ)^2 + 1
+                θ = clamp.(θ, 0, 1 - minimum_theta)
+            end
+
+            view(du, :, e) .+= rd.M \ (rhs_vol_high + Δ * Diagonal(θ .+ minimum_theta) * R * (rhs_vol_low - rhs_vol_high))
         elseif blend == :subcell_dynamic
             a = map((a, b) -> a .* b, Δ' * v, (R * (rhs_vol_low - rhs_vol_high)))
             a = reinterpret(Float64, a)
@@ -207,19 +275,12 @@ function rhs!(du, u, cache, t)
             view(du, :, e) .+= rd.M \ rhs_vol_high
         end
     end
-
-    if blend == :viscosity
-        # Add the surface term back
-        interface_flux = ((uf - uP) .* md.nxJ) * Diagonal(viscosities)
-        du .-= rd.LIFT * interface_flux
-    end
     
     # invert Jacobian and mass matrix
+    if any(isnan.(sum(du)))
+        println("NAN DETECTED")
+    end
     du ./= -md.J
-
-    # if any(isnan.(sum.(du)))
-    #     println("NAN DETECTED")
-    # end
 end
 
 rd = RefElemData(Line(), SBP(), N)
@@ -233,3 +294,12 @@ md = MeshData((VX,), EToV, rd)
 # subcell FV operators
 Δ = diagm(0 => -ones(rd.N+1), 1=>ones(rd.N+1))[1:end-1,:]
 R = tril(ones(size(Δ')), -1)
+
+function niceplot!()
+    plot!(legendfontsize=12)
+    plot!(xtickfontsize=12)
+    plot!(ytickfontsize=12)
+    plot!(labelfontsize=14)
+end
+
+current_timestep = dt # for positivity preservation

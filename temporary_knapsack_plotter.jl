@@ -6,6 +6,10 @@ L2 = QuadraticKnapsackSolver{Float64}()
 La = QuadraticKnapsackSolverA{Float64}()
 b = .5
 
+epsilon = 1e-6
+e1 = epsilon * [1, 0]
+e2 = epsilon * [0, 1]
+
 res = 1000
 domain = range(-.2, 1, res)
 values = Matrix{Float64}(undef, res, res)
@@ -15,10 +19,12 @@ for i in 1:res
         y = domain[j]
 
         aa = Float64[x, y]
-        values[i, j] = La(aa, b)[2]
+        # values[i, j] = L2(aa, b)[2]
+        values[i, j] = ((L2(aa + e2, b) - L2(aa - e2, b)) / (2epsilon))[2]
     end
 end
 
 heatmap(domain, domain, values)
-xlabel!("a₁")
-ylabel!("a₂")
+xlabel!(L"$a_1$")
+ylabel!(L"$a_2$")
+niceplot!()

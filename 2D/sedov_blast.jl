@@ -4,6 +4,20 @@ equations = CompressibleEulerEquations2D(1.4)
 
 initial_condition = initial_condition_sedov_blastwave
 
+(VX, VY), EToV = uniform_mesh(rd.element_type, K)
+
+function domain_change(x)
+    a = -1.5
+    b = 1.5
+    return (b - a)/2 * (x + 1) + a;
+end
+
+VX = domain_change.(VX)
+VY = domain_change.(VY)
+
+md = MeshData((VX, VY), EToV, rd; 
+        is_periodic=true)
+
 u0 = initial_condition.(SVector.(md.x, md.y), 0.0, equations)
 du = similar(u0)
 

@@ -17,7 +17,7 @@ if nameof(typeof(knapsack_solver)) == :ContinuousKnapsackSolver
 end
 
 include(MODULE)
-result *= "$(sol.stats.naccept), $(sol.stats.nreject + sol.stats.naccept)\n"
+result *= "$(sol.stats.nreject + sol.stats.naccept)\n"
 
 N = 7
 K = 32
@@ -27,7 +27,7 @@ if nameof(typeof(knapsack_solver)) == :ContinuousKnapsackSolver
 end
 
 include(MODULE)
-result *= "$(sol.stats.naccept), $(sol.stats.nreject + sol.stats.naccept)\n"
+result *= "$(sol.stats.nreject + sol.stats.naccept)\n"
 
 abstol = 1e-8
 reltol = 1e-6
@@ -39,7 +39,7 @@ if nameof(typeof(knapsack_solver)) == :ContinuousKnapsackSolver
 end
 
 include(MODULE)
-result *= "$(sol.stats.naccept), $(sol.stats.nreject + sol.stats.naccept)\n"
+result *= "$(sol.stats.nreject + sol.stats.naccept)\n"
 
 N = 7
 K = 32
@@ -49,7 +49,7 @@ if nameof(typeof(knapsack_solver)) == :ContinuousKnapsackSolver
 end
 
 include(MODULE)
-result *= "$(sol.stats.naccept), $(sol.stats.nreject + sol.stats.naccept)\n"
+result *= "$(sol.stats.nreject + sol.stats.naccept)\n"
 
 abstol = 1e-10
 reltol = 1e-8
@@ -61,7 +61,7 @@ if nameof(typeof(knapsack_solver)) == :ContinuousKnapsackSolver
 end
 
 include(MODULE)
-result *= "$(sol.stats.naccept), $(sol.stats.nreject + sol.stats.naccept)\n"
+result *= "$(sol.stats.nreject + sol.stats.naccept)\n"
 
 N = 7
 K = 32
@@ -71,6 +71,6 @@ if nameof(typeof(knapsack_solver)) == :ContinuousKnapsackSolver
 end
 
 include(MODULE)
-result *= "$(sol.stats.naccept), $(sol.stats.nreject + sol.stats.naccept)\n"
+result *= "$(sol.stats.nreject + sol.stats.naccept)\n"
 
 println(result)

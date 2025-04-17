@@ -17,49 +17,53 @@ include("../run_saver.jl")
 dimstring = "2D"
 use_run_saver = false
 
-N = 3
+N = 7
 K = 32
 
 total_error_estimates = []
-
-knapsack_solver = QuadraticKnapsackSolver{Float64}()
+knapsack_stats = Nothing
+# knapsack_solver = QuadraticKnapsackSolver{Float64}()
 # knapsack_solver = QuadraticKnapsackMinimizer{Float64}()
 # knapsack_solver = NonKnapsackSolver{Float64}()
 # knapsack_solver = QuadraticKnapsackSolverA{Float64}()
 # knapsack_solver = ContinuousKnapsackSolver((N + 1) * (N + 2))
 
 # volume_flux = flux_ranocha
-volume_flux = flux_central
+# volume_flux = flux_central
 # volume_flux = flux_shima_etal # useful for non ec solvers, for KHI
 
-blend = :subcell
+# blend = :subcell
 
 shock_capturing = 0
 nodewise_shock_capturing = 0
 
-abstol = 1e-8
-reltol = 1e-6
+abstol = 1e-6
+reltol = 1e-4
 
-timestepper = SSPRK43()
+timestepper = RK4()
 adaptive = false
-dt = 2e-5
-saveat = .1
+dt = 1e-4
+saveat = 1e-2
 
-preserve_positivity = .8
+preserve_positivity = -1
 
 # for automation purposes
 if @isdefined case
     if case == "L1"
-        global knapsack_solver = ContinuousKnapsackSolver((N + 1) * (N + 2))
+        global knapsack_solver = ContinuousKnapsackSolver((N + 1) * (N + 2) - N)
         global volume_flux = flux_central
+        global blend = :subcell
     elseif case == "L2"
-        global knapsack_solver = QuadraticKnapsackSolver{Float64}()
+        global knapsack_solver = QuadraticKnapsackMinimizer{Float64}()
         global volume_flux = flux_central
-    elseif case == "EC"
+        global blend = :subcell_reversed
+    elseif case == "ES"
         global knapsack_solver = NonKnapsackSolver{Float64}()
         global volume_flux = flux_ranocha
+        global blend = :subcell
     elseif case == "DG"
         global knapsack_solver = NonKnapsackSolver{Float64}()
         global volume_flux = flux_central
+        global blend = :subcell
     end
 end

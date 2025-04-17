@@ -2,9 +2,9 @@ include("common.jl")
 tspan = (0.0, 25.)
 equations = CompressibleEulerEquations2D(1.4)
 
-# initial_condition = initial_condition_khi
+initial_condition = initial_condition_khi
 # initial_condition = initial_condition_khi_asymmetric
-initial_condition = initial_condition_khi_dissipated
+# initial_condition = initial_condition_khi_dissipated
 
 u0 = initial_condition.(SVector.(md.x, md.y), 0.0, equations)
 du = similar(u0)

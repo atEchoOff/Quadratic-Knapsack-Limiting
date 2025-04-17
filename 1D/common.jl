@@ -84,59 +84,35 @@ function rhs!(du, u, cache, t)
         # optimization target
         b = sum(cache.B * psi.(u_element, equations)) + sum(dot.(v, rhs_vol_low))
 
-        function preserve_positivity_forward()
-            maximum_theta = 1
-
-            if preserve_positivity >= 0
-                # top part first
-                top_part = (1 - preserve_positivity) * (rd.M * (md.J[1, 1] / current_timestep * u_element - view(du, :, e)) - rhs_vol_low)
-                # Now bottom part
-                bottom_part = rhs_vol_high - rhs_vol_low
-
-                # FIXME for compressible euler, we satisfy positivity just for 1st and 3rd component...
-                top_part = vcat(getindex.(top_part, 1), getindex.(top_part, 3))
-                bottom_part = vcat(getindex.(bottom_part, 1), getindex.(bottom_part, 3))
-
-                # If bottom part is negative, we dont want to count it in the minimum.
-                top_part = top_part[bottom_part .> 0]
-                bottom_part = 2 * bottom_part[bottom_part .> 0]
-
-                # Now, compute the minimum
-                if length(bottom_part) > 0
-                    maximum_theta = minimum(top_part ./ bottom_part)
-                    maximum_theta = min(1, maximum_theta)
-                end
+        function C(u)
+            if u >= 0
+                return min(u, one(typeof(u)))
+            else
+                return one(typeof(u))
             end
-
-            return maximum_theta
         end
 
-        function preserve_positivity_backward()
-            minimum_theta = 0
-
+        function preserve_positivity_backward_nodewise(type, component)
             if preserve_positivity >= 0
-                # We need to determine the bound here. 
-                # top part first
-                top_part = rhs_vol_high - preserve_positivity * rhs_vol_low - (1 - preserve_positivity) * rd.M * (md.J[1, 1] / current_timestep * u_element - view(du, :, e))
-                # Now bottom part
-                bottom_part = rhs_vol_high - rhs_vol_low
+                # First, determine h
+                h = (1 - preserve_positivity) * (1 / current_timestep * md.J[1, 1] * rd.M * u_element - rd.M * view(du, :, e))
+                # Now, \hat{h}
+                h_hat = getindex.(h - (1 - preserve_positivity) * rhs_vol_low, component)
+                # Now, c
+                c = getindex.(R * (rhs_vol_high - rhs_vol_low), component)
 
-                # FIXME for compressible euler, we satisfy positivity just for 1st and 3rd component...
-                top_part = vcat(getindex.(top_part, 1), getindex.(top_part, 3))
-                bottom_part = vcat(getindex.(bottom_part, 1), getindex.(bottom_part, 3))
-
-                # If bottom part is negative, we dont want to count it in the minimum.
-                top_part = 2top_part[bottom_part .> 0]
-                bottom_part = bottom_part[bottom_part .> 0]
-
-                # Now, compute the minimum
-                if length(bottom_part) > 0
-                    minimum_theta = maximum(top_part ./ bottom_part)
-                    minimum_theta = clamp(minimum_theta, 0, 1)
+                # Now, we determine 1 - l_c
+                l_c = Vector{type}(undef, N + 2)
+                l_c[1] = C(h_hat[1] / (-2c[1]))
+                l_c[N + 2] = C(h_hat[N + 1] / (2c[N + 2]))
+                for i in 2:(N + 1)
+                    l_c[i] = min(C(h_hat[i - 1] / (2c[i])), C(h_hat[i] / (-2c[i])))
                 end
-            end
 
-            return minimum_theta
+                return 1 .- l_c
+            else
+                return zeros(N + 2)
+            end
         end
 
         ### Shock capturing optimization target
@@ -222,12 +198,10 @@ function rhs!(du, u, cache, t)
             view(du, :, e) .+= rd.M \ (θ * rhs_vol_high + (1 - θ) * rhs_vol_low)
         elseif blend == :subcell
             a = v' * Δ * Diagonal(R * (rhs_vol_low - rhs_vol_high))
-            
-            maximum_theta = preserve_positivity_forward()
 
             # Call the Knapsack Solver
             a = vec(a)
-            θ = cache.knapsack_solver(a, b, upper_bounds = ones(eltype(a), length(a)) * maximum_theta)
+            θ = cache.knapsack_solver(a, b, upper_bounds = ones(eltype(a), length(a)))
             
             if nodewise_shock_capturing > 0
                 @. a *= N * tan(pi/2 * nodewise_shock_capturing)^2 * (1 - θ)^2 + 1
@@ -237,21 +211,29 @@ function rhs!(du, u, cache, t)
 
             view(du, :, e) .+= rd.M \ (Δ * (Diagonal(θ) * R * rhs_vol_high + Diagonal(1 .- θ) * R * rhs_vol_low))
         elseif blend == :subcell_reversed
-            a = v' * Δ * Diagonal(R * (rhs_vol_high - rhs_vol_low))
+            a = v' * Δ * Diagonal(R * (rhs_vol_low - rhs_vol_high))
 
-            minimum_theta = preserve_positivity_backward()
+            # minimum_theta = preserve_positivity_backward_again()
+            l_c_1 = preserve_positivity_backward_nodewise(eltype(a), 1)
+            l_c_3 = preserve_positivity_backward_nodewise(eltype(a), 3)
+            l_c = max.(l_c_1, l_c_3)
+            if initial_condition == initial_condition_leblanc_shocktube && t < 1e-7
+                println("Elementwise limiting coefficients chosen for lablanc")
+                l_c .= maximum(l_c)
+                l_c = min.(1, 2l_c)
+            end
             
             # Call the Knapsack Solver
             a = vec(a)
-            b = sum(cache.B * psi.(u_element, equations)) + sum(dot.(v, rhs_vol_high)) - minimum_theta * sum(a)
-            θ = cache.knapsack_solver(a, b, upper_bounds = ones(length(a)) * (1 - minimum_theta))
+            b = -sum(cache.B * psi.(u_element, equations)) - sum(dot.(v, rhs_vol_high)) + a'l_c # minimum_theta * sum(a)
+            θ = cache.knapsack_solver(a, b, upper_bounds = (1 .- l_c)) # ones(length(a)) * (1 - minimum_theta)
             
             if nodewise_shock_capturing > 0
-                @. θ *= N * tan(pi/2 * nodewise_shock_capturing)^2 * (θ)^2 + 1
-                θ = clamp.(θ, 0, 1 - minimum_theta)
+                @. θ *= N^(nodewise_shock_capturing) * θ^2 / ((1 - θ)^2 + 1e-10) + 1
+                θ = clamp.(θ, 0, 1 .- l_c)
             end
 
-            view(du, :, e) .+= rd.M \ (rhs_vol_high + Δ * Diagonal(θ .+ minimum_theta) * R * (rhs_vol_low - rhs_vol_high))
+            view(du, :, e) .+= rd.M \ (rhs_vol_high + Δ * Diagonal(θ + l_c) * R * (rhs_vol_low - rhs_vol_high)) # θ .+ minimum_theta
         elseif blend == :subcell_dynamic
             a = map((a, b) -> a .* b, Δ' * v, (R * (rhs_vol_low - rhs_vol_high)))
             a = reinterpret(Float64, a)
@@ -303,3 +285,6 @@ function niceplot!()
 end
 
 current_timestep = dt # for positivity preservation
+if knapsack_stats != Nothing # if we are grabbing stats, reset them on new run
+    knapsack_stats = []
+end

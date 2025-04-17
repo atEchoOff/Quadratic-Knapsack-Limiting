@@ -118,6 +118,37 @@ function rhs!(du, u, cache, t)
             return maximum_theta
         end
 
+        function C(u)
+            if u >= 0
+                return min(u, 1)
+            else
+                return 1
+            end
+        end
+
+        function preserve_positivity_backward_nodewise(component)
+            if preserve_positivity >= 0
+                # First, determine h
+                h = (1 - preserve_positivity) * (1 / current_timestep * md.J[1, 1] * rd.M * u_element - rd.M * view(du, :, e))
+                # Now, \hat{h}
+                h_hat = getindex.(h - (1 - preserve_positivity) * rhs_vol_low, component)
+                # Now, c
+                c = getindex.(Rr * (rhs_vol_high - rhs_vol_low), component)
+
+                # Now, we determine 1 - l_c
+                l_c = Vector{Float64}(undef, size(Rr, 1))
+                l_c[1] = C(h_hat[1] / (-2c[1]))
+                l_c[end] = C(h_hat[end] / (2c[end]))
+                for i in 2:(size(Rr, 1) - 1)
+                    l_c[i] = min(C(h_hat[i - 1] / (2c[i])), C(h_hat[i] / (-2c[i])))
+                end
+
+                return 1 .- l_c
+            else
+                return zeros(size(Rr, 1))
+            end
+        end
+
         if blend == :subcell
             ### Shock capturing optimization target
             b = sum(rd.wf .* psi.(uf[:, e], SVector.(md.nxJ[:,e], md.nyJ[:,e]), equations)) + sum(dot.(v, rhs_vol_low))        
@@ -156,20 +187,28 @@ function rhs!(du, u, cache, t)
             view(du, :, e) .+= rd.M \ (Δr * (Diagonal(θ) * (Rr * rhs_vol_high) + 
                                             Diagonal(1 .- θ) * (Rr * rhs_vol_low)))
         elseif blend == :subcell_reversed
-            # FIXME still need positivity preserving
-            a = dot.(vec(v' * Δr), (Rr * (rhs_vol_high - rhs_vol_low)))
-            b = sum(rd.wf .* psi.(uf[:, e], SVector.(md.nxJ[:,e], md.nyJ[:,e]), equations)) + sum(dot.(v, rhs_vol_high))
+            # Get limiting coeffs
+            l_c_1 = preserve_positivity_backward_nodewise(1)
+            l_c_4 = preserve_positivity_backward_nodewise(4)
+            # Get elementwise maxima
+            l_c = max.(l_c_1, l_c_4)
+
+            # Elementwise limiting coeffs for 2D sims
+            l_c .= maximum(l_c)
+            l_c = min.(1, l_c)
+
+            a = dot.(vec(v' * Δr), (Rr * (rhs_vol_low - rhs_vol_high)))
+            b = -sum(rd.wf .* psi.(uf[:, e], SVector.(md.nxJ[:,e], md.nyJ[:,e]), equations)) - sum(dot.(v, rhs_vol_high)) + a'l_c
 
             # Call the Knapsack Solver
-            θ = cache.knapsack_solver!(a, b)
+            θ = cache.knapsack_solver!(a, b, upper_bounds = (1 .- l_c))
             
             if nodewise_shock_capturing > 0
-                @. a *= N^2 * tan(pi/2 * nodewise_shock_capturing)^2 * (θ - 1)^2 + 1
-
-                θ = cache.knapsack_solver!(vec(a), b)
+                @. θ *= N^(2nodewise_shock_capturing) * θ^2 / ((1 - θ)^2 + 1e-10) + 1
+                θ = clamp.(θ, 0, 1 .- l_c)
             end
             
-            view(du, :, e) .+= rd.M \ (rhs_vol_high + Δr * Diagonal(θ) * Rr * (rhs_vol_low - rhs_vol_high))
+            view(du, :, e) .+= rd.M \ (rhs_vol_high + Δr * Diagonal(θ + l_c) * Rr * (rhs_vol_low - rhs_vol_high))
         elseif blend == :viscosity
             l = sum(dot.(v, rhs_vol_visc))
             dΨ = sum(rd.wf .* psi.(uf[:, e], SVector.(md.nxJ[:,e], md.nyJ[:,e]), equations))
@@ -251,5 +290,8 @@ Qr_skew, Qs_skew = map(A -> (A - A'), (Qr, Qs))
 Qr_sparse_skew, Qs_sparse_skew = map(A -> (A - A'), (Qr_sparse, Qs_sparse))
 
 (Δr, Δs), (Rr, Rs) = subcell_limiting_operators(rd)
+# override subcell limiting operators for preserve_positivity
+Δr = diagm(0 => -ones(size(Rr, 2)), 1=>ones(size(Rr, 2)))[1:end-1,:]
+Rr = tril(ones(size(Δr')), -1)
 
 current_timestep = dt # for positivity preservation

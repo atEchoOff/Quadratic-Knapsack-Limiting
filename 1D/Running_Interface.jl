@@ -20,8 +20,9 @@ dimstring = "1D"
 use_run_saver = false
 
 N = 3
-K = 64
+K = 100
 
+knapsack_stats = Nothing # comment this out if you dont want to save blending coeffs and iters over time
 # knapsack_solver = QuadraticKnapsackSolver{Float64}()
 # knapsack_solver = NonKnapsackSolver{Float64}()
 # knapsack_solver = QuadraticKnapsackSolverA{Float64}()
@@ -39,15 +40,15 @@ volume_flux = flux_central
 blend = :subcell_reversed
 
 shock_capturing = 0
-nodewise_shock_capturing = .995
+nodewise_shock_capturing = 5
 
 abstol = 1e-6
 reltol = 1e-4
 
-timestepper = SSPRK43()
+timestepper = RK4()
 adaptive = true
 dt = 1e-4
-saveat = 1e-3
+saveat = .1
 
 preserve_positivity = -1
 
@@ -56,14 +57,18 @@ if @isdefined case
     if case == "L1"
         global knapsack_solver = ContinuousKnapsackSolver((N + 2))
         global volume_flux = flux_central
+        global blend = :subcell
     elseif case == "L2"
-        global knapsack_solver = QuadraticKnapsackSolver{Float64}()
+        global knapsack_solver = QuadraticKnapsackMinimizer{Float64}()
         global volume_flux = flux_central
-    elseif case == "EC"
+        global blend = :subcell_reversed
+    elseif case == "ES"
         global knapsack_solver = NonKnapsackSolver{Float64}()
-        global volume_flux = flux_ec
+        global volume_flux = flux_ranocha
+        global blend = :subcell
     elseif case == "DG"
         global knapsack_solver = NonKnapsackSolver{Float64}()
         global volume_flux = flux_central
+        global blend = :subcell
     end
 end

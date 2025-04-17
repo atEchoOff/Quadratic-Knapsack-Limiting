@@ -34,21 +34,18 @@ function quadratic_knapsack_minimizer!(x, a, b, upper_bounds, w; tol = 100 * eps
     # maxit is a huge upper bound here. The iteration will take at most N + 1 iterations, but usually takes around 1 - 3, and rarely 4.
     # Note also, if maxit is reached, it likely implies that b is negative, so the problem needs cleaning
 
-    # Here we minimize theta subject to a'theta <= b
+    # Here we minimize theta subject to a'theta >= b
 
-    if b >= 0.0
+    if b <= 0.0 || any(isnan.(a))
         # x = 0 is the optimal solution for the minimization
         # meaning the optimal solution for the maximization problem is upper_bounds
         x .= zero(eltype(a))
+
+        if knapsack_stats != Nothing
+            push!(knapsack_stats, [0, x])
+        end
         return x
     end
-
-    # We now want to solve for equality. We want a'theta == b
-    # For the algorithm to work correctly, we need b > 0. Therefore, we negate a and b
-
-    # Negate both a and b
-    a = -a
-    b = -b
 
     # Now, we want a'theta = b > 0. 
 
@@ -77,6 +74,10 @@ function quadratic_knapsack_minimizer!(x, a, b, upper_bounds, w; tol = 100 * eps
 
         deriv = a' * (a_over_w .* (x .< upper_bounds) .* (lambdak * a_over_w .>= 0.0) .* (a_over_w .> 0.0))
 
+        if deriv == 0
+            # ... Thats the best we can do
+            break
+        end
         # Compute the next root
         lambdak -= f_val / deriv
 
@@ -86,12 +87,16 @@ function quadratic_knapsack_minimizer!(x, a, b, upper_bounds, w; tol = 100 * eps
     # x .= sgn_a .* x
 
     ### These are all my sanity checks. Non well-posed problems may break them, so if issues are found, uncomment these and the sanity check comments above for checking.
-    if itercount > 3
+    if itercount > 6
         println("The itercount was $itercount")
         @show a
         @show b
         @show upper_bounds
         println(a'x - b)
+    end
+
+    if knapsack_stats != Nothing
+        push!(knapsack_stats, [itercount + 1, x])
     end
 
     # @assert all(x .== 1.0)

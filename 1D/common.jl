@@ -225,7 +225,7 @@ function rhs!(du, u, cache, t)
             
             # Call the Knapsack Solver
             a = vec(a)
-            b = -sum(cache.B * psi.(u_element, equations)) - sum(dot.(v, rhs_vol_high)) + a'l_c # minimum_theta * sum(a)
+            b = -sum(cache.B * psi.(u_element, equations)) - sum(dot.(v, rhs_vol_high)) - a'l_c # minimum_theta * sum(a)
             θ = cache.knapsack_solver(a, b, upper_bounds = (1 .- l_c)) # ones(length(a)) * (1 - minimum_theta)
             
             if nodewise_shock_capturing > 0

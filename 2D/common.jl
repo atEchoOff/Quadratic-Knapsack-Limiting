@@ -195,10 +195,9 @@ function rhs!(du, u, cache, t)
 
             # Elementwise limiting coeffs for 2D sims
             l_c .= maximum(l_c)
-            l_c = min.(1, l_c)
 
             a = dot.(vec(v' * Δr), (Rr * (rhs_vol_low - rhs_vol_high)))
-            b = -sum(rd.wf .* psi.(uf[:, e], SVector.(md.nxJ[:,e], md.nyJ[:,e]), equations)) - sum(dot.(v, rhs_vol_high)) + a'l_c
+            b = -sum(rd.wf .* psi.(uf[:, e], SVector.(md.nxJ[:,e], md.nyJ[:,e]), equations)) - sum(dot.(v, rhs_vol_high)) - a'l_c
 
             # Call the Knapsack Solver
             θ = cache.knapsack_solver!(a, b, upper_bounds = (1 .- l_c))

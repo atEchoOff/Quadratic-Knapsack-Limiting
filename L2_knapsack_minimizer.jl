@@ -74,10 +74,6 @@ function quadratic_knapsack_minimizer!(x, a, b, upper_bounds, w; tol = 100 * eps
 
         deriv = a' * (a_over_w .* (x .< upper_bounds) .* (lambdak * a_over_w .>= 0.0) .* (a_over_w .> 0.0))
 
-        if deriv == 0
-            # ... Thats the best we can do
-            break
-        end
         # Compute the next root
         lambdak -= f_val / deriv
 

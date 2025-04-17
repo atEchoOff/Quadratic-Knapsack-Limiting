@@ -17,8 +17,8 @@ include("../run_saver.jl")
 dimstring = "2D"
 use_run_saver = false
 
-N = 7
-K = 32
+N = 3
+K = 100
 
 total_error_estimates = []
 knapsack_stats = Nothing
@@ -40,12 +40,12 @@ nodewise_shock_capturing = 0
 abstol = 1e-6
 reltol = 1e-4
 
-timestepper = RK4()
+timestepper = SSPRK43()
 adaptive = false
-dt = 1e-4
-saveat = 1e-2
+dt = 4e-5
+saveat = .1
 
-preserve_positivity = -1
+preserve_positivity = .7
 
 # for automation purposes
 if @isdefined case

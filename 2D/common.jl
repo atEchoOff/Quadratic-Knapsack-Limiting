@@ -194,7 +194,7 @@ function rhs!(du, u, cache, t)
             l_c = max.(l_c_1, l_c_4)
 
             # Elementwise limiting coeffs for 2D sims
-            if initial_condition == inital_condition_sedov_blastwave
+            if initial_condition == initial_condition_sedov_blastwave
                 l_c .= maximum(l_c)
             end
 

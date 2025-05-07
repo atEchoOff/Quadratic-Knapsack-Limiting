@@ -19,8 +19,8 @@ include("../run_saver.jl")
 dimstring = "1D"
 use_run_saver = false
 
-N = 3
-K = 1000
+N = 7
+K = 100
 
 knapsack_stats = Nothing # comment this out if you dont want to save blending coeffs and iters over time
 # knapsack_solver = QuadraticKnapsackSolver{Float64}()
@@ -45,12 +45,12 @@ nodewise_shock_capturing = 0
 abstol = 1e-6
 reltol = 1e-4
 
-timestepper = SSPRK43()
-adaptive = false
-dt = 2.0893e-8
-saveat = .1
+timestepper = Tsit5()
+adaptive = true
+dt = 1e-4
+saveat = 1e-3
 
-preserve_positivity = .8
+preserve_positivity = -1
 
 # for automation purposes
 if @isdefined case

@@ -198,6 +198,8 @@ function rhs!(du, u, cache, t)
                 l_c .= maximum(l_c)
             end
 
+            # l_c = 1 .- exp.(-.005 * [0, (0:(size(Rr, 1) - 2))...])
+
             a = dot.(vec(v' * Δr), (Rr * (rhs_vol_low - rhs_vol_high)))
             b = -sum(rd.wf .* psi.(uf[:, e], SVector.(md.nxJ[:,e], md.nyJ[:,e]), equations)) - sum(dot.(v, rhs_vol_high)) - a'l_c
 
@@ -265,6 +267,8 @@ function rhs!(du, u, cache, t)
             r = (rhs_vol_high - Δr * Diagonal(λ) * Rr * rhs_vol_visc)
 
             view(du, :, e) .+= rd.M \ r
+        elseif blend == :loworder
+            view(du, :, e) .+= rd.M \ rhs_vol_low
         end
 
     end

@@ -23,16 +23,16 @@ K = 100
 total_error_estimates = []
 knapsack_stats = Nothing
 # knapsack_solver = QuadraticKnapsackSolver{Float64}()
-# knapsack_solver = QuadraticKnapsackMinimizer{Float64}()
+knapsack_solver = QuadraticKnapsackMinimizer{Float64}()
 # knapsack_solver = NonKnapsackSolver{Float64}()
 # knapsack_solver = QuadraticKnapsackSolverA{Float64}()
 # knapsack_solver = ContinuousKnapsackSolver((N + 1) * (N + 2))
 
 # volume_flux = flux_ranocha
-# volume_flux = flux_central
+volume_flux = flux_central
 # volume_flux = flux_shima_etal # useful for non ec solvers, for KHI
 
-# blend = :subcell
+blend = :subcell_reversed
 
 shock_capturing = 0
 nodewise_shock_capturing = 0
@@ -42,10 +42,10 @@ reltol = 1e-4
 
 timestepper = SSPRK43()
 adaptive = false
-dt = 4e-5
-saveat = .1
+dt = 1.2e-4
+saveat = 4e-3
 
-preserve_positivity = .7
+preserve_positivity = .6
 
 # for automation purposes
 if @isdefined case

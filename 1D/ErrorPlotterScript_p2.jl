@@ -11,8 +11,8 @@ L2 = find("L2")
 EC = find("ES")
 DG = find("DG")
 # times = find("times")
-dt = 1e-2
-T = 4
+dt = 1e-5
+T = .2
 times = dt:dt:T
 
 # times = rollmean(times, 1024)
@@ -25,16 +25,16 @@ times = dt:dt:T
 
 # times should already be set
 plot()
-plot(times, L1, lw=2, c=:red, label="LK", yaxis=:log)
-plot!(times, L2, lw=2, c=:blue, label="QK", yaxis=:log)
-plot!(times, EC, lw=2, c=:orange, label="ESFD", yaxis=:log)
-plot!(times, DG, lw=2, c=:green, label="DGSEM", yaxis=:log)
-# plot(times, L1, lw=2, c=:red, label="LK")
-# plot!(times, L2, lw=2, c=:blue, label="QK")
-# plot!(times, EC, lw=2, c=:orange, label="EC")
-# plot!(times, DG, lw=2, c=:green, label="DG")
+# plot(times, L1, lw=2, c=:red, label="LK", yaxis=:log)
+# plot!(times, L2, lw=2, c=:blue, label="QK", yaxis=:log)
+# plot!(times, EC, lw=2, c=:orange, label="ESFD", yaxis=:log)
+# plot!(times, DG, lw=2, c=:green, label="DGSEM", yaxis=:log)
+plot(times, L1, lw=2, c=:red, label="LK")
+plot!(times, L2, lw=2, c=:blue, label="QK")
+plot!(times, EC, lw=2, c=:orange, label="ESFD")
+plot!(times, DG, lw=2, c=:green, label="DGSEM")
 xlabel!(L"$t$")
-ylabel!(L"$L^2$ Error")
+ylabel!("Total Entropy")
 plot!(legend=:right)
 plot!(legendfontsize=12)
 plot!(xtickfontsize=12)

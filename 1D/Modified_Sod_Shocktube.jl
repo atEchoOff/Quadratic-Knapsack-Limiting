@@ -17,9 +17,9 @@ md = MeshData((VX, ), EToV, rd)
 
 equations = CompressibleEulerEquations1D(1.4)
 
-initial_condition = initial_condition_modified_sod
+# initial_condition = initial_condition_modified_sod
 # initial_condition = initial_condition_modified_squared_sod
-# initial_condition = initial_condition_sod_shock
+initial_condition = initial_condition_sod_shock
 
 u0 = rd.Pq * initial_condition.(md.xq, 0.0, equations)
 u = copy(u0)

@@ -19,8 +19,8 @@ include("../run_saver.jl")
 dimstring = "1D"
 use_run_saver = false
 
-N = 3
-K = 1000
+N = 7
+K = 32
 
 knapsack_stats = Nothing # comment this out if you dont want to save blending coeffs and iters over time
 # knapsack_solver = QuadraticKnapsackSolver{Float64}()
@@ -28,16 +28,16 @@ knapsack_stats = Nothing # comment this out if you dont want to save blending co
 # knapsack_solver = QuadraticKnapsackSolverA{Float64}()
 # knapsack_solver = ContinuousKnapsackSolver((N + 2))
 # knapsack_solver = SmoothKnapsackSolver{Float64}()
-knapsack_solver = QuadraticKnapsackMinimizer{Float64}()
+# knapsack_solver = QuadraticKnapsackMinimizer{Float64}()
 
 total_error_estimates = []
 
-volume_flux = flux_central
+# volume_flux = flux_central
 # volume_flux = flux_shima_etal
 # volume_flux = flux_lax_friedrichs
 # volume_flux = flux_ranocha
 # volume_flux = flux_ec
-blend = :subcell_reversed
+# blend = :subcell_reversed
 
 shock_capturing = 0
 nodewise_shock_capturing = 0
@@ -45,12 +45,12 @@ nodewise_shock_capturing = 0
 abstol = 1e-6
 reltol = 1e-4
 
-timestepper = SSPRK43()
+timestepper = RK4()
 adaptive = false
-dt = 2.0893e-8
-saveat = .1
+dt = 1e-5
+saveat = 1e-5
 
-preserve_positivity = .8
+preserve_positivity = -1
 
 # for automation purposes
 if @isdefined case

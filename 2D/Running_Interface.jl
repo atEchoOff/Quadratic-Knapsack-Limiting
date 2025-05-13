@@ -17,8 +17,8 @@ include("../run_saver.jl")
 dimstring = "2D"
 use_run_saver = false
 
-N = 3
-K = 64
+N = 7
+K = 32
 
 total_error_estimates = []
 knapsack_stats = Nothing
@@ -42,8 +42,8 @@ reltol = 1e-4
 
 timestepper = RK4()
 adaptive = false
-dt = 2e-5
-saveat = 1e-4
+dt = 1e-4
+saveat = 1e-2
 
 preserve_positivity = -1
 

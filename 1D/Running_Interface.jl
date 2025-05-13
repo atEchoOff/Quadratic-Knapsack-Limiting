@@ -51,6 +51,7 @@ dt = 1e-5
 saveat = 1e-5
 
 preserve_positivity = -1
+preserve_positivity = -1
 
 # for automation purposes
 if @isdefined case

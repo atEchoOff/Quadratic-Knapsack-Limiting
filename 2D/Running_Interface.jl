@@ -18,7 +18,7 @@ dimstring = "2D"
 use_run_saver = false
 
 N = 3
-K = 100
+K = 150
 
 total_error_estimates = []
 knapsack_stats = Nothing
@@ -29,6 +29,7 @@ knapsack_solver = QuadraticKnapsackMinimizer{Float64}()
 # knapsack_solver = ContinuousKnapsackSolver((N + 1) * (N + 2))
 
 # volume_flux = flux_ranocha
+volume_flux = flux_central
 volume_flux = flux_central
 # volume_flux = flux_shima_etal # useful for non ec solvers, for KHI
 

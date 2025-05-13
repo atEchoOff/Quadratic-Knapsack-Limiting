@@ -102,16 +102,16 @@ function rhs!(du, u, cache, t)
                 c = getindex.(R * (rhs_vol_high - rhs_vol_low), component)
 
                 # Now, we determine 1 - l_c
-                l_c = Vector{type}(undef, N + 2)
+                l_c = Vector{type}(undef, size(R, 1))
                 l_c[1] = C(h_hat[1] / (-2c[1]))
-                l_c[N + 2] = C(h_hat[N + 1] / (2c[N + 2]))
-                for i in 2:(N + 1)
+                l_c[N + 2] = C(h_hat[end] / (2c[end]))
+                for i in 2:(size(R, 1) - 1)
                     l_c[i] = min(C(h_hat[i - 1] / (2c[i])), C(h_hat[i] / (-2c[i])))
                 end
 
                 return 1 .- l_c
             else
-                return zeros(N + 2)
+                return zeros(size(R, 1))
             end
         end
 
@@ -201,7 +201,7 @@ function rhs!(du, u, cache, t)
 
             # Call the Knapsack Solver
             a = vec(a)
-            θ = cache.knapsack_solver(a, b, upper_bounds = ones(eltype(a), length(a)))
+            θ = cache.knapsack_solver(a, b, upper_bounds = ones(eltype(a), length(a))) # upper_bounds = exp.(.005 * [0, 0, -1, -2, -3, -4, -5, -6]) # upper_bounds = ones(eltype(a), length(a)) exp.(.002 * [0, 0, -1, -2])
             
             if nodewise_shock_capturing > 0
                 @. a *= N * tan(pi/2 * nodewise_shock_capturing)^2 * (1 - θ)^2 + 1
@@ -222,7 +222,8 @@ function rhs!(du, u, cache, t)
                 l_c .= maximum(l_c)
                 l_c = min.(1, 2l_c)
             end
-            
+
+            # l_c = 1 .- exp.(-.02 * [0, (0:(size(R, 1) - 2))...])
             # Call the Knapsack Solver
             a = vec(a)
             b = -sum(cache.B * psi.(u_element, equations)) - sum(dot.(v, rhs_vol_high)) - a'l_c # minimum_theta * sum(a)

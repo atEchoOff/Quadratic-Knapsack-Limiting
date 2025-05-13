@@ -30,7 +30,6 @@ knapsack_solver = QuadraticKnapsackMinimizer{Float64}()
 
 # volume_flux = flux_ranocha
 volume_flux = flux_central
-volume_flux = flux_central
 # volume_flux = flux_shima_etal # useful for non ec solvers, for KHI
 
 blend = :subcell_reversed

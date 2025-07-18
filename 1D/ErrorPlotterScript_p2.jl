@@ -1,3 +1,5 @@
+# Used just for plotting
+
 include("../ObjectTransitioner.jl")
 using Plots
 using LaTeXStrings
@@ -35,12 +37,12 @@ plot!(times, EC, lw=2, c=:orange, label="ESFD")
 plot!(times, DG, lw=2, c=:green, label="DGSEM")
 xlabel!(L"$t$")
 ylabel!("Total Entropy")
-plot!(legend=:right)
+plot!(legend=:topright)
 plot!(legendfontsize=12)
 plot!(xtickfontsize=12)
 plot!(ytickfontsize=12)
 plot!(labelfontsize=14)
-# plot!(rightmargin = 4mm)
+plot!(rightmargin = 4mm)
 
 L1 = L1[times .>= .1]
 L2 = L2[times .>= .1]
@@ -50,6 +52,7 @@ DG = DG[times .>= .1]
 
 
 plot!(ylim=(minimum(union(L1, L2, EC, DG)), maximum(union(L1, L2, EC, DG))))
+# plot!(ylim=(1.90, 1.916))
 
 savefig("density_wave_plots.png")
 plot!()

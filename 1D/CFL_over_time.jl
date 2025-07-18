@@ -1,5 +1,5 @@
 CFLs = []
-Δx = .02 # For Lablanc
+Δx = .02
 for i in 1:(length(sol.t) - 1)
     ui = cons2prim.(sol.u[i], equations)
     rho = getindex.(ui, 1)

@@ -7,7 +7,7 @@ MODULE = "density_wave.jl"
 
 println("Running $MODULE, with knapsack_solver = $(nameof(typeof(knapsack_solver))), volume_flux = $(nameof(typeof(volume_flux))) timestepper = $(nameof(typeof(timestepper))). Last, (N, M) = ($N, $K). ENSURE CORRECT BEFORE PROCEEDING")
 
-include(MODULE)
+# include(MODULE)
 times = copy(sol.t)
 errors = Float64[]
 
@@ -19,8 +19,8 @@ xq = Vq * md.x
 yq = Vq * md.y
 
 for i in 1:length(times)
-    push!(errors, sqrt(sum(wJq .* map(x -> sum(x.^2), initial_condition.(SVector.(xq, yq), times[i], equations) - Vq * sol.u[i]))))
-    # push!(errors, sum(md.wJq .* (Vq * entropy.(sol.u[i], equations))))
+    # push!(errors, sqrt(sum(wJq .* map(x -> sum(x.^2), initial_condition.(SVector.(xq, yq), times[i], equations) - Vq * sol.u[i])))) # for error
+    push!(errors, md.J[1, 1] * sum(rd.wq .* (entropy.(sol.u[i], equations)))) # for total entropy
 end
 
 times = times[2:end]

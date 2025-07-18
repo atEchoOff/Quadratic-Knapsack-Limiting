@@ -5,7 +5,7 @@ using LsqFit
 
 MODULE = "density_wave.jl"
 
-N = 3
+N = 4
 adaptive = false
 dt = 1e-4
 
@@ -16,12 +16,12 @@ println("Running $MODULE, with knapsack_solver = $(nameof(typeof(knapsack_solver
 Li = Float64[]
 Ki = Float64[]
 
-i = 8
-while length(Li) == 0 || Li[end] > 1e-6
+i = 2
+while length(Li) == 0 || i <= 32
     global K, i
     K = floor(Int, i)
     println("Testing K = $K")
-    i *= 2^.2
+    i *= 2
 
     push!(Ki, 2 / K)
 

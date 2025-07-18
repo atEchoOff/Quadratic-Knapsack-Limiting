@@ -22,8 +22,8 @@ xq = Vq * md.x
 
 
 for i in 1:length(times)
-    # push!(errors, sqrt(sum(wJq .* map(x -> sum(x.^2), initial_condition.(xq, sol.t[i], equations) - Vq * sol.u[i]))))
-    push!(errors, sum(wJq .* (Vq * entropy.(sol.u[i], equations))))
+    # push!(errors, sqrt(sum(wJq .* map(x -> sum(x.^2), initial_condition.(xq, sol.t[i], equations) - Vq * sol.u[i])))) # for error
+    push!(errors, md.J[1, 1] * sum(rd.wq .* (entropy.(sol.u[i], equations)))) # for total entropy
 end
 
 times = times[2:end]

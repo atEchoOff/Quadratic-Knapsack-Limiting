@@ -2,8 +2,8 @@ include("common.jl")
 tspan = (0.0, 4.0)
 equations = CompressibleEulerEquations2D(1.4)
 
-initial_condition = initial_condition_density_wave
-# initial_condition = initial_condition_density_wave_low
+# initial_condition = initial_condition_density_wave
+initial_condition = initial_condition_density_wave_low
 
 
 u0 = initial_condition.(SVector.(md.x, md.y), 0.0, equations)

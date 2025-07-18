@@ -21,7 +21,7 @@ N = 3
 K = 128
 
 total_error_estimates = []
-knapsack_stats = Nothing
+knapsack_stats = Nothing # make this [] if you want to save stats
 # knapsack_solver = QuadraticKnapsackSolver{Float64}()
 knapsack_solver = QuadraticKnapsackMinimizer{Float64}()
 # knapsack_solver = NonKnapsackSolver{Float64}()

@@ -22,7 +22,7 @@ use_run_saver = false
 N = 3
 K = 100
 
-knapsack_stats = Nothing # comment this out if you dont want to save blending coeffs and iters over time
+knapsack_stats = Nothing # Make this [] if you want to save stats
 # knapsack_solver = QuadraticKnapsackSolver{Float64}()
 # knapsack_solver = NonKnapsackSolver{Float64}()
 # knapsack_solver = QuadraticKnapsackSolverA{Float64}()
